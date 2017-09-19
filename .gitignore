@@ -5,7 +5,7 @@
 # ignore Jetbrains IDE project files
 .idea
 
-# Created by https://www.gitignore.io/api/go,linux,macos,windows,intellij+iml,visualstudiocode
+# (modified!) Created by https://www.gitignore.io/api/go,linux,macos,windows,intellij+iml,visualstudiocode (modified!)
 
 ### Go ###
 # Binaries for programs and plugins
@@ -24,7 +24,7 @@
 .glide/
 
 # Golang project vendor packages which should be ignored
-vendor/
+#vendor/
 
 ### Intellij+iml ###
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and Webstorm
