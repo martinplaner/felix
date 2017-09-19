@@ -1,1 +1,2 @@
-buildpack: https://github.com/heroku/heroku-buildpack-go#master
+targets:
+  debian-8:
