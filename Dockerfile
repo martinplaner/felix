@@ -20,6 +20,7 @@ RUN addgroup -g 6554 felix && adduser -s /bin/false -G felix -u 6554 -D felix
 RUN mkdir -p /data
 RUN chown felix:felix /data
 
+EXPOSE 6554
 VOLUME [ "/data" ]
 
 USER felix
