@@ -5,8 +5,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/martinplaner/felix/internal/felix"
@@ -38,6 +44,46 @@ func main() {
 	fmt.Println("Hello from felix!")
 	fmt.Println("Item:", item)
 	fmt.Println("Link:", link)
+
+	stopChan := make(chan os.Signal)
+	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
+
+	mux := http.NewServeMux()
+
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, "Hello from felix web!")
+	}))
+
+	srv := &http.Server{Addr: ":6554", Handler: mux}
+
+	go func() {
+		// service connections
+		if err := srv.ListenAndServe(); err != nil {
+			log.Printf("listen: %s\n", err)
+		}
+	}()
+
+	go func() {
+	L:
+		for {
+			select {
+			case <-time.After(2 * time.Second):
+				fmt.Println("Hello (again) from felix!")
+			case <-stopChan:
+				break L
+			}
+		}
+	}()
+
+	<-stopChan // wait for SIGINT
+	log.Println("Shutting down server...")
+
+	// shut down gracefully, but wait no longer than 5 seconds before halting
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	srv.Shutdown(ctx)
+	cancel()
+
+	log.Println("Server gracefully stopped")
 }
 
 func printVersion() {
