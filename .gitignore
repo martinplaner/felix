@@ -1,6 +1,7 @@
 # ignore main binary
 /felix
 /felix.exe
+/config.yml
 
 # ignore Jetbrains IDE project files
 .idea

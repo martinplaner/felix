@@ -6,12 +6,15 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -28,6 +31,19 @@ var (
 )
 
 func main() {
+
+	config := flag.String("config", "config.yml", "config file")
+	datadir := flag.String("datadir", ".", "data dir")
+	flag.Parse()
+
+	b, err := ioutil.ReadFile(*config)
+	if err != nil {
+		log.Fatal("could not read config file:", err)
+	}
+
+	if err := ioutil.WriteFile(filepath.Join(*datadir, "foo.txt"), b, 0644); err != nil {
+		log.Fatal("could not write output file:", err)
+	}
 
 	item := &felix.Item{
 		Title:   "Title",
