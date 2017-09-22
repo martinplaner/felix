@@ -56,6 +56,10 @@ func (s *httpSource) Get(ctx context.Context, url string) (io.Reader, error) {
 
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("http request unsuccessful")
+	}
+
 	contentType := resp.Header.Get("Content-Type")
 	r, err := charset.NewReader(resp.Body, contentType)
 
