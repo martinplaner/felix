@@ -9,8 +9,6 @@ import (
 	"io"
 	"io/ioutil"
 	"testing"
-
-	felix "github.com/martinplaner/felix2"
 )
 
 func TestLogger(t *testing.T) {
@@ -23,7 +21,7 @@ func TestLogger(t *testing.T) {
 }
 
 // TestLogger tests the passed logger and expects the output to be written to the given reader.
-func testLogger(t *testing.T, log felix.Logger, r io.Reader) {
+func testLogger(t *testing.T, log Logger, r io.Reader) {
 	testCases := []struct {
 		msg     string
 		keyvals []interface{}
