@@ -9,67 +9,76 @@ import "strings"
 import "net/url"
 
 type ItemFilter interface {
-	Filter(Item)
+	Filter(item Item, next func(Item))
 }
 
 // ItemFilterFunc is an adapter to allow the use of ordinary functions as filters.
 // If f is a function with the appropriate signature, ItemFilterFunc(f) is a ItemFilter that calls f.
-type ItemFilterFunc func(Item)
+type ItemFilterFunc func(Item, func(Item))
 
-func (f ItemFilterFunc) Filter(i Item) {
-	f(i)
+// Filter calls the underlying ItemFilterFunc
+func (f ItemFilterFunc) Filter(item Item, next func(Item)) {
+	f(item, next)
 }
 
-type ItemFilterAdapter func(ItemFilter) ItemFilter
-
 // FilterItems should just filter until in-Channel is closed? Or is quit channel needed?
-func FilterItems(in <-chan Item, out chan<- Item, filters ...ItemFilterAdapter) {
+func FilterItems(in <-chan Item, out chan<- Item, filters ...ItemFilter) {
 
 	// final filter chain output
-	var chain ItemFilter = ItemFilterFunc(func(item Item) {
+	var final = func(item Item) {
 		out <- item
-	})
-
-	// construct filter chain (preserve filter order)
-	for i := len(filters) - 1; i >= 0; i-- {
-		adapter := filters[i]
-		chain = adapter(chain)
 	}
 
+	chain := buildItemFilterChain(filters...)
+
 	for item := range in {
-		chain.Filter(item)
+		chain.Filter(item, final)
 	}
 
 	close(out)
 }
 
-// ItemTitleFilter only allows items through where the title matches
+func buildItemFilterChain(filters ...ItemFilter) ItemFilter {
+	if len(filters) > 1 {
+		return ItemFilterFunc(func(item Item, next func(Item)) {
+			filters[0].Filter(item, func(item Item) {
+				buildItemFilterChain(filters[1:]...).Filter(item, next)
+			})
+		})
+	} else if len(filters) == 1 {
+		return filters[0]
+	} else {
+		return ItemFilterFunc(func(item Item, next func(Item)) {
+			next(item)
+		})
+	}
+}
+
+// ItemTitleFilter only accepts items where the title matches
 // at least one of the given titles. (After conversion to lower case and
 // stripping of all non-alphanumeric characters)
-func ItemTitleFilter(titles []string) ItemFilterAdapter {
+func ItemTitleFilter(titles ...string) ItemFilter {
 
 	validTitles := make([][]string, 0, len(titles))
 	for _, t := range titles {
 		validTitles = append(validTitles, strings.Split(sanitizeTitle(t), " "))
 	}
 
-	return func(next ItemFilter) ItemFilter {
-		return ItemFilterFunc(func(item Item) {
-			itemTitle := sanitizeTitle(item.Title)
-			for _, title := range validTitles {
-				found := true
-				for _, tf := range title {
-					if !strings.Contains(tf, itemTitle) {
-						found = false
-					}
-				}
-				if found {
-					next.Filter(item)
-					return
+	return ItemFilterFunc(func(item Item, next func(Item)) {
+		itemTitle := sanitizeTitle(item.Title)
+		for _, title := range validTitles {
+			found := true
+			for _, tf := range title {
+				if !strings.Contains(itemTitle, tf) {
+					found = false
 				}
 			}
-		})
-	}
+			if found {
+				next(item)
+				return
+			}
+		}
+	})
 }
 
 // sanitizeTitle strips all non-alphanumeric characters from a string
@@ -97,61 +106,71 @@ func sanitizeTitle(title string) string {
 }
 
 type LinkFilter interface {
-	Filter(Link)
+	Filter(link Link, next func(Link))
 }
 
-type LinkFilterFunc func(Link)
+type LinkFilterFunc func(Link, func(Link))
 
-func (f LinkFilterFunc) Filter(l Link) {
-	f(l)
+func (f LinkFilterFunc) Filter(link Link, next func(Link)) {
+	f(link, next)
 }
 
 type LinkFilterAdapter func(LinkFilter) LinkFilter
 
 // FilterLinks should just filter until in-Channel is closed? Or is quit channel needed?
-func FilterLinks(in <-chan Link, out chan<- Link, filters ...LinkFilterAdapter) {
+func FilterLinks(in <-chan Link, out chan<- Link, filters ...LinkFilter) {
 
 	// final filter chain output
-	var chain LinkFilter = LinkFilterFunc(func(link Link) {
+	var final = func(link Link) {
 		out <- link
-	})
-
-	// construct filter chain
-	for i := len(filters) - 1; i >= 0; i-- {
-		adapter := filters[i]
-		chain = adapter(chain)
 	}
 
-	for item := range in {
-		chain.Filter(item)
+	chain := buildLinkFilterChain(filters...)
+
+	for link := range in {
+		chain.Filter(link, final)
 	}
 
 	close(out)
 }
 
-func LinkDomainFilter(domains ...string) LinkFilterAdapter {
+func buildLinkFilterChain(filters ...LinkFilter) LinkFilter {
+	if len(filters) > 1 {
+		return LinkFilterFunc(func(link Link, next func(Link)) {
+			filters[0].Filter(link, func(link Link) {
+				buildLinkFilterChain(filters[1:]...).Filter(link, next)
+			})
+		})
+	} else if len(filters) == 1 {
+		return filters[0]
+	} else {
+		return LinkFilterFunc(func(link Link, next func(Link)) {
+			next(link)
+		})
+	}
+}
+
+func LinkDomainFilter(domains ...string) LinkFilter {
 
 	validDomains := make([]string, 0, len(domains))
 	for _, domain := range domains {
 		validDomains = append(validDomains, strings.ToLower(strings.TrimSpace(domain)))
 	}
 
-	return func(next LinkFilter) LinkFilter {
-		return LinkFilterFunc(func(link Link) {
-			u, err := url.Parse(link.URL)
+	return LinkFilterFunc(func(link Link, next func(Link)) {
+		u, err := url.Parse(link.URL)
 
-			if err != nil {
+		if err != nil {
+			return
+		}
+
+		hostname := strings.ToLower(u.Hostname())
+
+		for _, domain := range validDomains {
+			if domain == hostname {
+				next(link)
 				return
 			}
-
-			hostname := strings.ToLower(u.Hostname())
-
-			for _, domain := range validDomains {
-				if domain == hostname {
-					next.Filter(link)
-					return
-				}
-			}
-		})
-	}
+		}
+	})
 }
