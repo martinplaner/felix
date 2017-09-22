@@ -45,7 +45,7 @@ func TestSource(t *testing.T) {
 			r, err := source.Get(context.Background(), url)
 
 			if (err != nil) != tC.wantError {
-				t.Errorf("unexpected error return value! wantError = %q, got: %q", tC.wantError, err)
+				t.Errorf("unexpected error return value! wantError = %v, got: %q", tC.wantError, err)
 			}
 
 			got, err := ioutil.ReadAll(r)
