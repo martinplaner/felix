@@ -6,7 +6,12 @@ package felix
 
 import "unicode"
 import "strings"
-import "net/url"
+import (
+	"net/url"
+	"regexp"
+
+	"github.com/pkg/errors"
+)
 
 type ItemFilter interface {
 	Filter(item Item, next func(Item))
@@ -173,4 +178,25 @@ func LinkDomainFilter(domains ...string) LinkFilter {
 			}
 		}
 	})
+}
+
+func LinkURLRegexFilter(exprs ...string) (LinkFilter, error) {
+
+	var regexes []*regexp.Regexp
+	for _, expr := range exprs {
+		regex, err := regexp.Compile(expr)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compile regular expression")
+		}
+		regexes = append(regexes, regex)
+	}
+
+	return LinkFilterFunc(func(link Link, next func(Link)) {
+		for _, expr := range regexes {
+			if expr.MatchString(link.URL) {
+				next(link)
+				break
+			}
+		}
+	}), nil
 }

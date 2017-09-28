@@ -269,3 +269,56 @@ func TestLinkDomainFilter(t *testing.T) {
 		})
 	}
 }
+
+func TestLinkURLRegexFilter(t *testing.T) {
+
+	// must create new filter
+	var newFilter = func(exprs ...string) LinkFilter {
+		t.Helper()
+		f, err := LinkURLRegexFilter(exprs...)
+		if err != nil {
+			panic(err)
+		}
+		return f
+	}
+
+	testCases := []struct {
+		desc     string
+		filter   LinkFilter
+		input    []Link
+		expected []Link
+	}{
+		{
+			desc:     "empty filter criteria",
+			filter:   newFilter(),
+			input:    []Link{Link{URL: "http://example.com/test.mp4"}},
+			expected: []Link{},
+		},
+		{
+			desc:     "matching filter",
+			filter:   newFilter(`.*\.mp4$`, `.*\.mkv$`),
+			input:    []Link{Link{URL: "http://example.com/test.mp4"}, Link{URL: "http://example.com/test.mkv"}},
+			expected: []Link{Link{URL: "http://example.com/test.mp4"}, Link{URL: "http://example.com/test.mkv"}},
+		},
+		{
+			desc:     "non-matching filter",
+			filter:   newFilter(`.*\.mp4`),
+			input:    []Link{Link{URL: "http://example.com/test.mkv"}},
+			expected: []Link{},
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			got := runLinkFilter(tC.filter, tC.input)
+
+			if len(got) != len(tC.expected) {
+				t.Errorf("unexpected number of links returned by filter, expected %d, got %d", len(tC.expected), len(got))
+			}
+
+			if !reflect.DeepEqual(got, tC.expected) {
+				t.Errorf("unexpected links returned by filter, expected %#v, got %#v", tC.expected, got)
+			}
+		})
+	}
+}
