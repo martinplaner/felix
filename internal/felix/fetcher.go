@@ -10,19 +10,19 @@ import (
 	"time"
 )
 
-// PeriodicFetcher is the default fetcher that fetches using a fixed time interval.
-type PeriodicFetcher struct {
-	url           string
-	src           Source
-	scanner       Scanner
-	items         chan<- Item
-	links         chan<- Link
-	log           Logger
-	fetchInterval time.Duration
+// Fetcher is the default fetcher.
+type Fetcher struct {
+	url       string
+	source    Source
+	scanner   Scanner
+	nextFetch func() time.Duration
+	items     chan<- Item
+	links     chan<- Link
+	log       Logger
 }
 
-// Start starts a new periodic ASDFFOOBAR
-func (f *PeriodicFetcher) Start(quit <-chan struct{}) {
+// Start starts the fetching.
+func (f *Fetcher) Start(quit <-chan struct{}) {
 
 	bg := context.Background()
 	e := &emitter{
@@ -33,15 +33,16 @@ func (f *PeriodicFetcher) Start(quit <-chan struct{}) {
 L:
 	for {
 		select {
-		case <-time.After(f.sleepDuration()):
+		// TODO: abstract time stdlib away into clock, etc. for testing
+		case <-time.After(f.nextFetch()):
 			// TODO: make timeout configurable
-			ctx, cancel := context.WithTimeout(bg, 30*time.Second)
+			ctx, cancel := context.WithTimeout(bg, 20*time.Second)
 			e.EmitFollow(f.url)
 
 			for e.HasFollow() {
 				followURL := e.NextFollow()
 
-				r, err := f.src.Get(ctx, followURL)
+				r, err := f.source.Get(ctx, followURL)
 
 				if nerr, ok := err.(net.Error); ok && nerr.Temporary() {
 					// TODO: handle temporary errors (backoff, retry)
@@ -59,7 +60,7 @@ L:
 				err = f.scanner.Scan(ctx, r, e)
 
 				if err != nil {
-					f.log.Error("could not scan content", "url", f.url, "follow", followURL)
+					f.log.Error("could not scan content", "err", err, "url", f.url, "follow", followURL)
 					cancel()
 					continue
 				}
@@ -71,9 +72,4 @@ L:
 			break L
 		}
 	}
-}
-
-func (f *PeriodicFetcher) sleepDuration() time.Duration {
-	// TODO: calculate proper sleep duration since last try
-	return f.fetchInterval
 }

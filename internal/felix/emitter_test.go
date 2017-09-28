@@ -59,4 +59,8 @@ func TestEmitter(t *testing.T) {
 		}
 		i++
 	}
+
+	if i != len(testFollow) {
+		t.Errorf("unexpected number of follows: expected %q, got %q", len(testFollow), i)
+	}
 }
