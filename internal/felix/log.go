@@ -20,6 +20,7 @@ type Logger interface {
 	Info(msg string, keyvals ...interface{})
 	Warn(msg string, keyvals ...interface{})
 	Error(msg string, keyvals ...interface{})
+	Fatal(msg string, keyvals ...interface{})
 }
 
 func NewLogger() *DefaultLogger {
@@ -59,6 +60,12 @@ func (l *DefaultLogger) Error(msg string, keyvals ...interface{}) {
 	l.log("error", msg, keyvals...)
 }
 
+// Error logs with error level.
+func (l *DefaultLogger) Fatal(msg string, keyvals ...interface{}) {
+	l.log("fatal", msg, keyvals...)
+	os.Exit(1)
+}
+
 func (l *DefaultLogger) log(level, msg string, keyvals ...interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -94,3 +101,6 @@ func (NopLogger) Warn(msg string, keyvals ...interface{}) {}
 
 // Error is a no-op implementation of Logger.Error.
 func (NopLogger) Error(msg string, keyvals ...interface{}) {}
+
+// Error is a no-op implementation of Logger.Error.
+func (NopLogger) Fatal(msg string, keyvals ...interface{}) { os.Exit(1) }
