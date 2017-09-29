@@ -15,10 +15,27 @@ type Fetcher struct {
 	url       string
 	source    Source
 	scanner   Scanner
-	nextFetch func() time.Duration
+	nextFetch func() (time.Duration, bool)
 	items     chan<- Item
 	links     chan<- Link
 	log       Logger
+}
+
+func NewFetcher(url string, source Source, scanner Scanner, nextFetch func() (time.Duration, bool), items chan<- Item, links chan<- Link) *Fetcher {
+	return &Fetcher{
+		url:       url,
+		source:    source,
+		scanner:   scanner,
+		nextFetch: nextFetch,
+		items:     items,
+		links:     links,
+		log:       &NopLogger{},
+	}
+}
+
+func (f *Fetcher) SetLogger(log Logger) {
+	// TODO: consolidate into sublogger with common fields (url, etc.)
+	f.log = log
 }
 
 // Start starts the fetching.
@@ -32,10 +49,15 @@ func (f *Fetcher) Start(quit <-chan struct{}) {
 
 L:
 	for {
+		nextFetch, shouldContinue := f.nextFetch()
+		if !shouldContinue {
+			f.log.Info("will not try to continue. quitting.", "url", f.url)
+			return
+		}
+
 		select {
 		// TODO: abstract time stdlib away into clock, etc. for testing
-		case <-time.After(f.nextFetch()):
-			// TODO: make timeout configurable
+		case <-time.After(nextFetch):
 			ctx, cancel := context.WithTimeout(bg, 20*time.Second)
 			e.EmitFollow(f.url)
 
