@@ -5,20 +5,21 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/martinplaner/felix/internal/felix"
+	"github.com/martinplaner/felix/internal/felix/bolt"
+	"github.com/martinplaner/felix/internal/felix/html"
+	"github.com/martinplaner/felix/internal/felix/rss"
+	"golang.org/x/net/context"
 )
 
 var (
@@ -30,76 +31,257 @@ var (
 	GitSummary = "undefined"
 )
 
-func main() {
+var (
+	log           = felix.NewLogger()
+	source        = felix.NewHTTPSource(http.DefaultClient)
+	newItems      = make(chan felix.Item)
+	newLinks      = make(chan felix.Link)
+	filteredItems = make(chan felix.Item)
+	filteredLinks = make(chan felix.Link)
 
-	config := flag.String("config", "config.yml", "config file")
-	datadir := flag.String("datadir", ".", "data dir")
+	// TODO: remove this hack
+	titles []string
+)
+
+func main() {
+	printVersion()
+
+	configfile := flag.String("config", "config.yml", "location of the config file")
+	datadir := flag.String("datadir", ".", "dir for auxilliary data")
 	flag.Parse()
 
-	b, err := ioutil.ReadFile(*config)
+	// Initialize config and shared components
+
+	config, err := felix.ConfigFromFile(*configfile)
 	if err != nil {
-		log.Fatal("could not read config file:", err)
+		log.Fatal("could not read config file", "configfile", *configfile)
+	}
+	log.Info("read config from file.", "configfile", configfile)
+
+	datastorefile := filepath.Join(*datadir, "felix.db")
+	db, err := bolt.NewDatastore(datastorefile)
+	if err != nil {
+		log.Fatal("could not create datastore", "file", datastorefile)
+	} else {
+		log.Info("initialized datastore", "datastorefile", datastorefile)
+	}
+	defer db.Close()
+
+	// Configure fetchers and filters
+
+	feedFetchers := initFeedFetchers(config, db)
+	itemFilters := initItemFilters(config)
+	linkFilters := initLinkFilters(config)
+
+	quit := make(chan struct{})
+	var wgFeeds sync.WaitGroup
+	var wgItems sync.WaitGroup
+
+	sig := make(chan os.Signal)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+
+	// Start up components
+
+	for _, f := range feedFetchers {
+		log.Info("starting new feed fetcher")
+		wgFeeds.Add(1)
+		go func() {
+			f.Start(quit)
+			wgFeeds.Done()
+		}()
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(*datadir, "foo.txt"), b, 0644); err != nil {
-		log.Fatal("could not write output file:", err)
-	}
+	go felix.FilterItems(newItems, filteredItems, itemFilters...)
+	go RunPageFetchers(config, db, &wgItems)
+	go felix.FilterLinks(newLinks, filteredLinks, linkFilters...)
 
-	item := &felix.Item{
-		Title:   "Title",
-		URL:     "http://example.com",
-		PubDate: time.Now().Add(-1 * time.Second),
-	}
+	wgFeeds.Add(1)
+	go func() {
+		PeriodicCleanup(db, config.CleanupInterval, config.CleanupMaxAge, quit)
+		wgFeeds.Done()
+	}()
 
-	link := &felix.Link{
-		Title: "Title",
-		URL:   "http://example.com",
-	}
+	http.Handle("/", felix.FeedHandler(db))
+	http.Handle("/titles", felix.TitleHandler(titles...))
 
-	printVersion()
-	fmt.Println("Hello from felix!")
-	fmt.Println("Item:", item)
-	fmt.Println("Link:", link)
-
-	stopChan := make(chan os.Signal)
-	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
-
-	mux := http.NewServeMux()
-
-	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.WriteString(w, "Hello from felix web!")
-	}))
-
-	srv := &http.Server{Addr: ":6554", Handler: mux}
+	// TODO: make host and port configurable
+	server := &http.Server{Addr: fmt.Sprintf("%s:%d", "", 6554)}
 
 	go func() {
-		// service connections
-		if err := srv.ListenAndServe(); err != nil {
-			log.Printf("listen: %s\n", err)
+		log.Info("starting http server", "addr", server.Addr)
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Error("http server error", "err", err)
 		}
 	}()
 
+	// Shutdown handler
 	go func() {
-	L:
-		for {
-			select {
-			case <-time.After(2 * time.Second):
-				fmt.Println("Hello (again) from felix!")
-			case <-stopChan:
-				break L
+		<-sig
+		log.Info("got shutdown signal, finishing up")
+		close(quit)
+		wgFeeds.Wait()
+		close(newItems)
+		wgItems.Wait()
+		close(newLinks)
+	}()
+
+	// Insert filtered links into datastore
+	for link := range filteredLinks {
+		log.Info("found new link", "url", link.URL)
+		if _, err := db.StoreLink(link); err != nil {
+			log.Error("could not store link", "err", err, "link", link)
+		}
+	}
+
+	if err := server.Shutdown(context.Background()); err != nil {
+		log.Error("could not shutdown http server", "err", err)
+	} else {
+		log.Info("stopped http server")
+	}
+
+	log.Info("shutdown complete")
+}
+
+func PeriodicCleanup(db felix.Datastore, interval time.Duration, maxAge time.Duration, quit <-chan struct{}) {
+L:
+	for {
+		select {
+		case <-time.After(interval):
+			if err := db.Cleanup(maxAge); err != nil {
+				log.Error("could not cleanup datastore", "err", err)
 			}
+		case <-quit:
+			break L
 		}
-	}()
+	}
+}
 
-	<-stopChan // wait for SIGINT
-	log.Println("Shutting down server...")
+func initFeedFetchers(config felix.Config, data felix.Datastore) []*felix.Fetcher {
+	var feedFetchers []*felix.Fetcher
+	for _, fc := range config.Feeds {
+		switch fc.Type {
 
-	// shut down gracefully, but wait no longer than 5 seconds before halting
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	srv.Shutdown(ctx)
-	cancel()
+		case "rss":
+			fetchInterval := fc.FetchInterval
+			if fetchInterval == 0 {
+				fetchInterval = config.FetchInterval
+			}
 
-	log.Println("Server gracefully stopped")
+			nextFetch := felix.PeriodicWait(data, fetchInterval)
+			f := felix.NewFetcher(fc.URL, source, rss.ItemScanner, nextFetch, newItems, newLinks)
+			f.SetLogger(log)
+			feedFetchers = append(feedFetchers, f)
+
+		default:
+			log.Fatal("unknown feed type", "type", fc.Type)
+		}
+	}
+	return feedFetchers
+}
+
+func initItemFilters(config felix.Config) []felix.ItemFilter {
+	var itemFilters []felix.ItemFilter
+	for _, f := range config.ItemFilters {
+		switch f.Type {
+
+		case "title":
+			var fc felix.TitleItemFilterConfig
+			if err := f.Unmarshal(&fc); err != nil {
+				log.Fatal("could not decode filter config", "err", err, "type", f.Type)
+			}
+
+			itemFilters = append(itemFilters, felix.ItemTitleFilter(fc.Titles...))
+			titles = fc.Titles
+
+		default:
+			log.Fatal("unsupported item filter type", "type", f.Type)
+		}
+	}
+	return itemFilters
+}
+
+func initLinkFilters(config felix.Config) []felix.LinkFilter {
+	var linkFilters []felix.LinkFilter
+	for _, f := range config.LinkFilters {
+		switch f.Type {
+
+		case "domain":
+			var fc felix.LinkDomainFilterConfig
+			if err := f.Unmarshal(&fc); err != nil {
+				log.Fatal("could not decode filter config", "err", err, "type", f.Type)
+			}
+
+			linkFilters = append(linkFilters, felix.LinkDomainFilter(fc.Domains...))
+
+		case "regex":
+			var fc felix.LinkURLRegexFilterConfig
+			if err := f.Unmarshal(&fc); err != nil {
+				log.Fatal("could not decode filter config", "err", err, "type", f.Type)
+			}
+
+			lurf, err := felix.LinkURLRegexFilter(fc.Exprs...)
+			if err != nil {
+				log.Fatal("could not create filter", "err", err, "type", f.Type)
+			}
+
+			linkFilters = append(linkFilters, lurf)
+
+		default:
+			log.Fatal("unsupported link filter type", "type", f.Type)
+		}
+	}
+	return linkFilters
+}
+
+func RunPageFetchers(config felix.Config, db felix.Datastore, wg *sync.WaitGroup) {
+	// TODO: refactor this mess.. erm.. component -.-
+	quit := make(chan struct{})
+	// Restore old item fetchers / scrapers
+	oldItems, err := db.GetItems(config.CleanupMaxAge)
+	if err != nil {
+		log.Error("could not get items", "err", err, "cleanupMaxAge", config.CleanupMaxAge)
+	} else {
+		for _, item := range oldItems {
+			// TODO: Make maxTries configurable
+			log.Info("restarting item fetcher", "url", item.URL)
+			nextFetch := felix.FibWait(db, config.FetchInterval, 7)
+			f := felix.NewFetcher(item.URL, source, html.LinkScanner, nextFetch, newItems, newLinks)
+			f.SetLogger(log)
+
+			wg.Add(1)
+			go func() {
+				f.Start(quit)
+				wg.Done()
+			}()
+		}
+	}
+
+	for item := range filteredItems {
+		didExist, err := db.StoreItem(item)
+
+		if err != nil {
+			log.Error("could not store item", "err", err, "item", item)
+			continue
+		}
+
+		if didExist {
+			// Item did already exist. Skipping...
+			continue
+		}
+
+		log.Info("starting new item fetcher", "url", item.URL)
+		nextFetch := felix.FibWait(db, config.FetchInterval, 7)
+		f := felix.NewFetcher(item.URL, source, html.LinkScanner, nextFetch, newItems, newLinks)
+		f.SetLogger(log)
+
+		wg.Add(1)
+		go func() {
+			f.Start(quit)
+			wg.Done()
+		}()
+	}
+
+	close(quit)
 }
 
 func printVersion() {
