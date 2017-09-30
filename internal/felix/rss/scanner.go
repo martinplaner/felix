@@ -10,6 +10,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"time"
+
 	"github.com/martinplaner/felix/internal/felix"
 	"github.com/mmcdole/gofeed"
 )
@@ -27,7 +29,8 @@ var ItemScanner = felix.ScanFunc(func(ctx context.Context, r io.Reader, e felix.
 		e.EmitItem(felix.Item{
 			Title:   item.Title,
 			URL:     item.Link,
-			PubDate: *item.PublishedParsed,
+			PubDate: time.Now(),
+			//PubDate: *item.PublishedParsed, // -> crash on nil, fix maybe
 		})
 	}
 

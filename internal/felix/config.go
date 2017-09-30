@@ -90,6 +90,7 @@ type LinkURLRegexFilterConfig struct {
 }
 
 func NewConfig() Config {
+	// TODO: return value or pointer?
 	return Config{
 		UserAgent:       DefaultUserAgent,
 		FetchInterval:   DefaultFetchInterval,

@@ -56,7 +56,7 @@ func main() {
 	if err != nil {
 		log.Fatal("could not read config file", "configfile", *configfile)
 	}
-	log.Info("read config from file.", "configfile", configfile)
+	log.Info("read config from file.", "configfile", *configfile)
 
 	datastorefile := filepath.Join(*datadir, "felix.db")
 	db, err := bolt.NewDatastore(datastorefile)

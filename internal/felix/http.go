@@ -6,8 +6,8 @@ package felix
 
 import (
 	"fmt"
-	"html/template"
 	"net/http"
+	"text/template"
 	"time"
 )
 
