@@ -79,14 +79,14 @@ func TestFetcher(t *testing.T) {
 
 	scanSource := &mockScanSource{}
 
-	nextFetch := func(n int) func() time.Duration {
+	nextFetch := func(n int) func(url string) (bool, time.Duration) {
 		i := 0
-		return func() time.Duration {
+		return func(url string) (bool, time.Duration) {
 			defer func() { i++ }()
 			if i < n {
-				return 0
+				return true, 0
 			} else {
-				return 1000 * time.Hour
+				return true, 1000 * time.Hour
 			}
 		}
 	}(1)
