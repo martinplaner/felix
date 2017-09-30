@@ -1,3 +1,7 @@
+// Copyright 2017 Martin Planer. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package bolt
 
 import (
@@ -43,6 +47,7 @@ func (ds datastore) Close() error {
 	return ds.db.Close()
 }
 
+// TODO: dont increment tries when no try was really made (e.g. on restart)
 func (ds datastore) AddTry(key string) (last time.Time, tries int, err error) {
 	var lastTry tryEntity
 
@@ -58,7 +63,7 @@ func (ds datastore) AddTry(key string) (last time.Time, tries int, err error) {
 			// Create new entity if none exists
 			lastTry = tryEntity{
 				Key:     key,
-				LastTry: time.Now(),
+				LastTry: time.Time{},
 				Tries:   0,
 			}
 		}
