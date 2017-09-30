@@ -31,6 +31,8 @@ type Config struct {
 	LinkFilters     []FilterConfig `yaml:"linkFilters"`
 }
 
+var emptyConfig = Config{}
+
 type FeedConfig struct {
 	Type          string
 	URL           string
@@ -87,8 +89,8 @@ type LinkURLRegexFilterConfig struct {
 	Exprs []string
 }
 
-func NewConfig() *Config {
-	return &Config{
+func NewConfig() Config {
+	return Config{
 		UserAgent:       DefaultUserAgent,
 		FetchInterval:   DefaultFetchInterval,
 		CleanupInterval: DefaultCleanupInterval,
@@ -96,16 +98,16 @@ func NewConfig() *Config {
 	}
 }
 
-func ConfigFromFile(filename string) (*Config, error) {
+func ConfigFromFile(filename string) (Config, error) {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return nil, err
+		return emptyConfig, err
 	}
 
 	config := NewConfig()
-	yaml.Unmarshal(b, config)
+	yaml.Unmarshal(b, &config)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not unmarshal config")
+		return emptyConfig, errors.Wrap(err, "could not unmarshal config")
 	}
 
 	return config, nil
