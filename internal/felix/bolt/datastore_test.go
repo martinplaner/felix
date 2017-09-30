@@ -226,7 +226,7 @@ func TestDatastore_Cleanup(t *testing.T) {
 		_, tries, err := ds.AddTry(tryKey)
 		assertNilError(t, err)
 
-		if len(items) != 1 || len(links) != 1 || tries != 2 {
+		if len(items) != 1 || len(links) != 1 || tries != 1 {
 			t.Error("inconsistent state. cleanup should not have removed anything.")
 		}
 	})
@@ -242,7 +242,7 @@ func TestDatastore_Cleanup(t *testing.T) {
 		_, tries, err := ds.AddTry(tryKey)
 		assertNilError(t, err)
 
-		if len(items) != 0 || len(links) != 0 || tries != 1 {
+		if len(items) != 0 || len(links) != 0 || tries != 0 {
 			t.Error("inconsistent state. cleanup should have removed everything.")
 		}
 	})
