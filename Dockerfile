@@ -5,6 +5,7 @@ WORKDIR /go/src/github.com/martinplaner/felix
 RUN apk update && apk add git
 
 COPY . .
+RUN go get -t ./...
 RUN go get -u -v github.com/ahmetb/govvv
 RUN go test -v ./...
 RUN GOOS=linux GOARCH=amd64 govvv build
