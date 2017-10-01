@@ -25,3 +25,5 @@ linkFilters:
     exprs:
       - .*\.mkv$
       - .*\.mp4$
+  - type: filenameastitle
+    trimExt: true

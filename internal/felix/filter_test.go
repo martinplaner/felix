@@ -322,3 +322,57 @@ func TestLinkURLRegexFilter(t *testing.T) {
 		})
 	}
 }
+
+func TestLinkFilenameAsTitleFilter(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		filter   LinkFilter
+		input    []Link
+		expected []Link
+	}{
+		{
+			desc:     "valid filename",
+			filter:   LinkFilenameAsTitleFilter(false),
+			input:    []Link{Link{Title: "title", URL: "http://example.com/image.jpg"}, Link{Title: "title", URL: "http://example.com/dl/testfile"}},
+			expected: []Link{Link{Title: "image.jpg", URL: "http://example.com/image.jpg"}, Link{Title: "testfile", URL: "http://example.com/dl/testfile"}},
+		},
+		{
+			desc:     "strip file extension",
+			filter:   LinkFilenameAsTitleFilter(true),
+			input:    []Link{Link{Title: "title", URL: "http://example.com/image.jpg"}, Link{Title: "title", URL: "http://example.com/dl/testfile"}},
+			expected: []Link{Link{Title: "image", URL: "http://example.com/image.jpg"}, Link{Title: "testfile", URL: "http://example.com/dl/testfile"}},
+		},
+		{
+			desc:     "empty title and url",
+			filter:   LinkFilenameAsTitleFilter(false),
+			input:    []Link{Link{Title: "", URL: ""}},
+			expected: []Link{Link{Title: "", URL: ""}},
+		},
+		{
+			desc:     "empty path in url",
+			filter:   LinkFilenameAsTitleFilter(false),
+			input:    []Link{Link{Title: "title", URL: "http://example.com"}, Link{Title: "title", URL: "http://example.com/"}},
+			expected: []Link{Link{Title: "title", URL: "http://example.com"}, Link{Title: "title", URL: "http://example.com/"}},
+		},
+		{
+			desc:     "non-empty path but without filename",
+			filter:   LinkFilenameAsTitleFilter(false),
+			input:    []Link{Link{Title: "title", URL: "http://example.com/category/announcements/"}, Link{Title: "title", URL: "http://example.com/news/   "}},
+			expected: []Link{Link{Title: "title", URL: "http://example.com/category/announcements/"}, Link{Title: "title", URL: "http://example.com/news/   "}},
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			got := runLinkFilter(tC.filter, tC.input)
+
+			if len(got) != len(tC.expected) {
+				t.Errorf("unexpected number of links returned by filter, expected %d, got %d", len(tC.expected), len(got))
+			}
+
+			if !reflect.DeepEqual(got, tC.expected) {
+				t.Errorf("unexpected links returned by filter, expected %#v, got %#v", tC.expected, got)
+			}
+		})
+	}
+}

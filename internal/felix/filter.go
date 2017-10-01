@@ -12,6 +12,8 @@ import (
 	"strings"
 	"unicode"
 
+	"path/filepath"
+
 	"github.com/pkg/errors"
 )
 
@@ -243,10 +245,42 @@ func LinkURLRegexFilter(exprs ...string) (LinkFilter, error) {
 
 	return LinkFilterFunc(func(link Link, next func(Link)) {
 		for _, expr := range regexes {
-			if expr.MatchString(link.URL) {
+			if expr.MatchString(strings.TrimSpace(link.URL)) {
 				next(link)
 				break
 			}
 		}
 	}), nil
+}
+
+// LinkFilenameAsTitleFilter extracts the filename from the URL and sets it as the new link title.
+// When trimExt is set, the filter tries to remove the file extension, if one is present.
+func LinkFilenameAsTitleFilter(trimExt bool) LinkFilter {
+	return LinkFilterFunc(func(link Link, next func(Link)) {
+		u, err := url.Parse(strings.TrimSpace(link.URL))
+
+		if err != nil {
+			next(link)
+			return
+		}
+
+		if strings.HasSuffix(u.Path, "/") {
+			next(link)
+			return
+		}
+
+		filename := filepath.Base(u.Path)
+
+		if filename == "." || strings.Contains(filename, "/") {
+			next(link)
+			return
+		}
+
+		if trimExt {
+			filename = strings.TrimSuffix(filename, filepath.Ext(filename))
+		}
+
+		link.Title = filename
+		next(link)
+	})
 }

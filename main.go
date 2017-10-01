@@ -227,6 +227,14 @@ func initLinkFilters(config felix.Config) []felix.LinkFilter {
 
 			linkFilters = append(linkFilters, lurf)
 
+		case "filenameastitle":
+			var fc felix.LinkFilenameAsTitleFilterConfig
+			if err := f.Unmarshal(&fc); err != nil {
+				log.Fatal("could not decode filter config", "err", err, "type", f.Type)
+			}
+
+			linkFilters = append(linkFilters, felix.LinkFilenameAsTitleFilter(fc.TrimExt))
+
 		default:
 			log.Fatal("unsupported link filter type", "type", f.Type)
 		}

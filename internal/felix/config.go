@@ -100,6 +100,11 @@ type LinkURLRegexFilterConfig struct {
 	Exprs []string
 }
 
+// LinkFilenameAsTitleFilterConfig contains the configuration of a LinkFilenameAsTitleFilter.
+type LinkFilenameAsTitleFilterConfig struct {
+	TrimExt bool `yaml:"trimExt"`
+}
+
 // NewConfig returns a new configuration with default values.
 func NewConfig() Config {
 	// TODO: return value or pointer?
