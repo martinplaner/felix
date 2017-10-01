@@ -83,7 +83,6 @@ func main() {
 	// Start up components
 
 	for _, f := range feedFetchers {
-		log.Info("starting new feed fetcher")
 		wgFeeds.Add(1)
 		go func(f *felix.Fetcher) {
 			f.Start(quit)
