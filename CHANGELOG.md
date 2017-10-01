@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Currently no changes or additions.
 
+## [0.2.0] - 2017-10-01
+
+### Added
+
+- Added new filter (LinkFilenameAsTitleFilter) that tries to extract the filename from the URL and sets the link title accordingly.
+
 ## [0.1.0] - 2017-10-01
 
 This is the first working release.
@@ -25,3 +31,4 @@ This is the first working release.
 
 [Unreleased]: https://github.com/martinplaner/felix/tree/develop
 [0.1.0]: https://github.com/martinplaner/felix/releases/tag/v0.1.0
+[0.2.0]: https://github.com/martinplaner/felix/releases/tag/v0.2.0
