@@ -1,3 +1,8 @@
 language: go
-install: go get -t ./...
-script: go test -v ./...
+
+install: go get -t -v ./...
+
+script: ./test.sh
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
