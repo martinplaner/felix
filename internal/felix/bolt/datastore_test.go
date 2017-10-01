@@ -76,7 +76,7 @@ func TestDatastore_StoreItem(t *testing.T) {
 
 		assertNilError(t, err)
 
-		if didExist != false {
+		if didExist {
 			t.Errorf("unexpected exist status. expected %v, got %v", false, didExist)
 		}
 	})
@@ -86,7 +86,7 @@ func TestDatastore_StoreItem(t *testing.T) {
 
 		assertNilError(t, err)
 
-		if didExist != true {
+		if !didExist {
 			t.Errorf("unexpected exist status. expected %v, got %v", true, didExist)
 		}
 	})
@@ -150,7 +150,7 @@ func TestDatastore_StoreLink(t *testing.T) {
 
 		assertNilError(t, err)
 
-		if didExist != false {
+		if didExist {
 			t.Errorf("unexpected exist status. expected %v, got %v", false, didExist)
 		}
 	})
@@ -160,7 +160,7 @@ func TestDatastore_StoreLink(t *testing.T) {
 
 		assertNilError(t, err)
 
-		if didExist != true {
+		if !didExist {
 			t.Errorf("unexpected exist status. expected %v, got %v", true, didExist)
 		}
 	})

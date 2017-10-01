@@ -85,19 +85,19 @@ func main() {
 	for _, f := range feedFetchers {
 		log.Info("starting new feed fetcher")
 		wgFeeds.Add(1)
-		go func() {
+		go func(f *felix.Fetcher) {
 			f.Start(quit)
 			wgFeeds.Done()
-		}()
+		}(f)
 	}
 
 	go felix.FilterItems(newItems, filteredItems, itemFilters...)
-	go RunPageFetchers(config, db, &wgItems)
+	go runPageFetchers(config, db, &wgItems)
 	go felix.FilterLinks(newLinks, filteredLinks, linkFilters...)
 
 	wgFeeds.Add(1)
 	go func() {
-		PeriodicCleanup(db, config.CleanupInterval, config.CleanupMaxAge, quit)
+		periodicCleanup(db, config.CleanupInterval, config.CleanupMaxAge, quit)
 		wgFeeds.Done()
 	}()
 
@@ -142,7 +142,8 @@ func main() {
 	log.Info("shutdown complete")
 }
 
-func PeriodicCleanup(db felix.Datastore, interval time.Duration, maxAge time.Duration, quit <-chan struct{}) {
+// run periodic datastore cleanup routine to remove entries older than maxAge
+func periodicCleanup(db felix.Datastore, interval time.Duration, maxAge time.Duration, quit <-chan struct{}) {
 L:
 	for {
 		select {
@@ -185,7 +186,7 @@ func initItemFilters(config felix.Config) []felix.ItemFilter {
 		switch f.Type {
 
 		case "title":
-			var fc felix.TitleItemFilterConfig
+			var fc felix.ItemTitleFilterConfig
 			if err := f.Unmarshal(&fc); err != nil {
 				log.Fatal("could not decode filter config", "err", err, "type", f.Type)
 			}
@@ -233,7 +234,9 @@ func initLinkFilters(config felix.Config) []felix.LinkFilter {
 	return linkFilters
 }
 
-func RunPageFetchers(config felix.Config, db felix.Datastore, wg *sync.WaitGroup) {
+// runPageFetchers restarts old page fetchers found in the datastore
+// as well as new ones on demand when new items are found
+func runPageFetchers(config felix.Config, db felix.Datastore, wg *sync.WaitGroup) {
 	// TODO: refactor this mess.. erm.. component -.-
 	quit := make(chan struct{})
 	// Restore old item fetchers / scrapers

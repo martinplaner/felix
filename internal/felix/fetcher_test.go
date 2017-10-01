@@ -123,9 +123,9 @@ func (a *mockAttempter) Next(key string) (bool, time.Duration, error) {
 	if a.attempts > 0 {
 		a.attempts--
 		return true, 0, nil
-	} else {
-		return false, 0, nil
 	}
+
+	return false, 0, nil
 }
 
 func (mockAttempter) Inc(key string) error {

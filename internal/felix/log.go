@@ -23,6 +23,7 @@ type Logger interface {
 	Fatal(msg string, keyvals ...interface{})
 }
 
+// NewLogger creates a new DefaultLogger that outputs to os.Stdout.
 func NewLogger() *DefaultLogger {
 	return &DefaultLogger{
 		out: os.Stdout,
@@ -60,7 +61,7 @@ func (l *DefaultLogger) Error(msg string, keyvals ...interface{}) {
 	l.log("error", msg, keyvals...)
 }
 
-// Error logs with error level.
+// Fatal logs with fatal level and exits with unclean status code 1.
 func (l *DefaultLogger) Fatal(msg string, keyvals ...interface{}) {
 	l.log("fatal", msg, keyvals...)
 	os.Exit(1)
@@ -102,5 +103,5 @@ func (NopLogger) Warn(msg string, keyvals ...interface{}) {}
 // Error is a no-op implementation of Logger.Error.
 func (NopLogger) Error(msg string, keyvals ...interface{}) {}
 
-// Error is a no-op implementation of Logger.Error.
+// Fatal is a no-op implementation of Logger.Fatal.
 func (NopLogger) Fatal(msg string, keyvals ...interface{}) { os.Exit(1) }

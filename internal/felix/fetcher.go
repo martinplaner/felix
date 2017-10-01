@@ -32,6 +32,7 @@ type Attempter interface {
 // NextFetchFunc returns if the fetcher should continue to fetch and if so, how long to wait before the next attempt.
 type NextFetchFunc func(url string) (bool, time.Duration)
 
+// NewFetcher creates a new Fetcher.
 func NewFetcher(url string, source Source, scanner Scanner, attempt Attempter, items chan<- Item, links chan<- Link) *Fetcher {
 	return &Fetcher{
 		url:     url,
@@ -44,6 +45,8 @@ func NewFetcher(url string, source Source, scanner Scanner, attempt Attempter, i
 	}
 }
 
+// SetLogger sets the logger that is used by the fetcher.
+// Fetcher does not log when no Logger is set.
 func (f *Fetcher) SetLogger(log Logger) {
 	// TODO: consolidate into sublogger with common fields (url, etc.)
 	f.log = log
@@ -138,10 +141,11 @@ func (a attempt) Inc(key string) error {
 	return a.ds.IncAttempt(key)
 }
 
+// PeriodicAttempter creates a new Attempter for periodic attempts with a fixed interval.
 func PeriodicAttempter(ds Datastore, fetchInterval time.Duration) Attempter {
 	next := func(last time.Time, attempts int) (bool, time.Duration) {
 		nextTry := last.Add(fetchInterval)
-		untilNext := nextTry.Sub(time.Now())
+		untilNext := time.Until(nextTry)
 		return true, untilNext
 	}
 
@@ -151,6 +155,8 @@ func PeriodicAttempter(ds Datastore, fetchInterval time.Duration) Attempter {
 	}
 }
 
+// FibAttempter creates a new Attempter for attempts with a fibonacci based backoff interval, up to maxAttempts.
+// The interval length is defined by baseInterval & fib(attempt count).
 func FibAttempter(ds Datastore, baseInterval time.Duration, maxAttempts int) Attempter {
 	var fib func(n int) int
 	fib = func(n int) int {
@@ -167,7 +173,7 @@ func FibAttempter(ds Datastore, baseInterval time.Duration, maxAttempts int) Att
 
 		interval := time.Duration(fib(attempts)) * baseInterval
 		nextTry := last.Add(interval)
-		untilNext := nextTry.Sub(time.Now())
+		untilNext := time.Until(nextTry)
 		return true, untilNext
 	}
 

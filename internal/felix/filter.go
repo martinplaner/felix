@@ -39,6 +39,10 @@ func FilterString(itemFilters []ItemFilter, linkFilters []LinkFilter) string {
 	return b.String()
 }
 
+// ItemFilter wraps the Filter method for items.
+//
+// Filter evaluates the given item, optionally modifies it, and passes it
+// to the next filter in the filter chain, if it matches the filter criteria.
 type ItemFilter interface {
 	Filter(item Item, next func(Item))
 }
@@ -95,9 +99,8 @@ func buildItemFilterChain(filters ...ItemFilter) ItemFilter {
 	}
 }
 
-// ItemTitleFilter only accepts items where the title matches
-// at least one of the given titles. (After conversion to lower case and
-// stripping of all non-alphanumeric characters)
+// ItemTitleFilter filters items based on the given title strings.
+// (After conversion to lower case and stripping of all non-alphanumeric characters)
 func ItemTitleFilter(titles ...string) ItemFilter {
 
 	validTitles := make([][]string, 0, len(titles))
@@ -150,17 +153,22 @@ func sanitizeTitle(title string) string {
 	return string(t)
 }
 
+// LinkFilter wraps the Filter method for links.
+//
+// Filter evaluates the given link, optionally modifies it, and passes it
+// to the next filter in the filter chain, if it matches the filter criteria.
 type LinkFilter interface {
 	Filter(link Link, next func(Link))
 }
 
+// LinkFilterFunc is an adapter to allow the use of ordinary functions as filters.
+// If f is a function with the appropriate signature, LinkFilterFunc(f) is a LinkFilter that calls f.
 type LinkFilterFunc func(Link, func(Link))
 
+// Filter calls the underlying LinkFilterFunc and implements LinkFilter.
 func (f LinkFilterFunc) Filter(link Link, next func(Link)) {
 	f(link, next)
 }
-
-type LinkFilterAdapter func(LinkFilter) LinkFilter
 
 // FilterLinks should just filter until in-Channel is closed? Or is quit channel needed?
 func FilterLinks(in <-chan Link, out chan<- Link, filters ...LinkFilter) {
@@ -195,6 +203,7 @@ func buildLinkFilterChain(filters ...LinkFilter) LinkFilter {
 	}
 }
 
+// LinkDomainFilter filters links based on the given domains.
 func LinkDomainFilter(domains ...string) LinkFilter {
 
 	validDomains := make([]string, 0, len(domains))
@@ -220,6 +229,7 @@ func LinkDomainFilter(domains ...string) LinkFilter {
 	})
 }
 
+// LinkURLRegexFilter filters links based their URLs matching the given regular expressions.
 func LinkURLRegexFilter(exprs ...string) (LinkFilter, error) {
 
 	var regexes []*regexp.Regexp

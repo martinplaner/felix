@@ -11,11 +11,12 @@ import (
 	"time"
 )
 
-type Feed struct {
+type feed struct {
 	PubDate time.Time
 	Items   []Item
 }
 
+// StringHandler simply serves the given static string.
 func StringHandler(s string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
@@ -23,11 +24,12 @@ func StringHandler(s string) http.Handler {
 	})
 }
 
+// FeedHandler serves the found links as an RSS feed.
 func FeedHandler(ds Datastore) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// TODO: make configurable
-		links, err := ds.GetLinks(6 * time.Hour)
+		links, err := ds.GetLinks(3 * time.Hour)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -42,7 +44,7 @@ func FeedHandler(ds Datastore) http.Handler {
 			})
 		}
 
-		feed := &Feed{
+		feed := &feed{
 			PubDate: time.Now(),
 			Items:   items,
 		}

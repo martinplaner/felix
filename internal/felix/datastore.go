@@ -6,6 +6,7 @@ package felix
 
 import "time"
 
+// Datastore is used to store and retrieve items, links, etc.
 type Datastore interface {
 	LastAttempt(key string) (time.Time, int, error)
 	IncAttempt(key string) error

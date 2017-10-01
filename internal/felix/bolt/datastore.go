@@ -230,7 +230,9 @@ func (ds datastore) Cleanup(maxAge time.Duration) error {
 			}
 
 			if entity.Added.Before(cutoff) {
-				itemCursor.Delete()
+				if err := itemCursor.Delete(); err != nil {
+					return errors.Wrap(err, "could not delete item")
+				}
 			}
 		}
 
@@ -242,19 +244,23 @@ func (ds datastore) Cleanup(maxAge time.Duration) error {
 			}
 
 			if entity.Added.Before(cutoff) {
-				linkCursor.Delete()
+				if err := linkCursor.Delete(); err != nil {
+					return errors.Wrap(err, "could not delete item")
+				}
 			}
 		}
 
-		tryCursor := tx.Bucket(attemptBucket).Cursor()
-		for k, v := tryCursor.First(); k != nil; k, v = tryCursor.Next() {
+		attemptCursor := tx.Bucket(attemptBucket).Cursor()
+		for k, v := attemptCursor.First(); k != nil; k, v = attemptCursor.Next() {
 			var entity attemptEntity
 			if err := gob.NewDecoder(bytes.NewReader(v)).Decode(&entity); err != nil {
 				return errors.Wrap(err, "could not decode entity")
 			}
 
 			if entity.Last.Before(cutoff) {
-				tryCursor.Delete()
+				if err := attemptCursor.Delete(); err != nil {
+					return errors.Wrap(err, "could not delete item")
+				}
 			}
 		}
 
@@ -275,6 +281,7 @@ func put(b *bolt.Bucket, key []byte, v interface{}) error {
 	return nil
 }
 
+// NewDatastore returns a new Datastore backed by a boltdb at the given file location.
 func NewDatastore(filename string) (felix.Datastore, error) {
 	db, err := bolt.Open(filename, 0600, &bolt.Options{Timeout: 10 * time.Second})
 
@@ -282,7 +289,7 @@ func NewDatastore(filename string) (felix.Datastore, error) {
 		return nil, errors.Wrap(err, "could not open bolt db")
 	}
 
-	err = db.Update(func(tx *bolt.Tx) error {
+	dbErr := db.Update(func(tx *bolt.Tx) error {
 		for _, name := range [][]byte{attemptBucket, itemBucket, linkBucket} {
 			if _, err := tx.CreateBucketIfNotExists(name); err != nil {
 				return errors.Wrapf(err, "could not create bucket %s", name)
@@ -291,8 +298,8 @@ func NewDatastore(filename string) (felix.Datastore, error) {
 		return nil
 	})
 
-	if err != nil {
-		return nil, err
+	if dbErr != nil {
+		return nil, dbErr
 	}
 
 	return &datastore{db}, nil

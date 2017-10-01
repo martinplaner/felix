@@ -19,7 +19,7 @@ func TestScanFunc(t *testing.T) {
 		success = true
 		return nil
 	})
-	s.Scan(nil, nil, nil)
+	s.Scan(context.TODO(), nil, nil)
 
 	if !success {
 		t.Errorf("ScanFunc not called successfully. expected %v, got %v", true, success)
