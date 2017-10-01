@@ -4,14 +4,40 @@
 
 package felix
 
-import "unicode"
-import "strings"
 import (
+	"bytes"
+	"fmt"
 	"net/url"
 	"regexp"
+	"strings"
+	"unicode"
 
 	"github.com/pkg/errors"
 )
+
+// Stringer is an optional interface for all filters to provide a 'native' textual representation.
+type Stringer interface {
+	String() string
+}
+
+// FilterString return the concatenated string output of all passed filters that implement the Stringer interface.
+func FilterString(itemFilters []ItemFilter, linkFilters []LinkFilter) string {
+	var b bytes.Buffer
+
+	for _, f := range itemFilters {
+		if s, ok := f.(Stringer); ok {
+			b.WriteString(s.String())
+		}
+	}
+
+	for _, f := range linkFilters {
+		if s, ok := f.(Stringer); ok {
+			b.WriteString(s.String())
+		}
+	}
+
+	return b.String()
+}
 
 type ItemFilter interface {
 	Filter(item Item, next func(Item))
@@ -24,6 +50,16 @@ type ItemFilterFunc func(Item, func(Item))
 // Filter calls the underlying ItemFilterFunc
 func (f ItemFilterFunc) Filter(item Item, next func(Item)) {
 	f(item, next)
+}
+
+// internal helper type to provide an additional Stringer implementation
+type itemFilter struct {
+	ItemFilter
+	s string
+}
+
+func (f itemFilter) String() string {
+	return f.s
 }
 
 // FilterItems should just filter until in-Channel is closed? Or is quit channel needed?
@@ -65,11 +101,13 @@ func buildItemFilterChain(filters ...ItemFilter) ItemFilter {
 func ItemTitleFilter(titles ...string) ItemFilter {
 
 	validTitles := make([][]string, 0, len(titles))
+	var b bytes.Buffer
 	for _, t := range titles {
 		validTitles = append(validTitles, strings.Split(sanitizeTitle(t), " "))
+		fmt.Fprintf(&b, "ITEM_TITLE:%s\n", t)
 	}
 
-	return ItemFilterFunc(func(item Item, next func(Item)) {
+	filter := ItemFilterFunc(func(item Item, next func(Item)) {
 		itemTitle := sanitizeTitle(item.Title)
 		for _, title := range validTitles {
 			found := true
@@ -84,6 +122,8 @@ func ItemTitleFilter(titles ...string) ItemFilter {
 			}
 		}
 	})
+
+	return itemFilter{filter, b.String()}
 }
 
 // sanitizeTitle strips all non-alphanumeric characters from a string
