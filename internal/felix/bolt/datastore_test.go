@@ -166,38 +166,32 @@ func TestDatastore_StoreLink(t *testing.T) {
 	})
 }
 
-func TestDatastore_AddTry(t *testing.T) {
+func TestDatastore_Attempts(t *testing.T) {
 	ds, close := newDatastore(t)
 	defer close()
 	key := "key"
 
-	t.Run("first try should return 0 tries", func(t *testing.T) {
-		_, tries, err := ds.AddTry(key)
+	t.Run("new key should return 0 attempts on every call without incremeting", func(t *testing.T) {
+		for i := 0; i < 3; i++ {
+			_, attempts, err := ds.LastAttempt(key)
 
-		assertNilError(t, err)
+			assertNilError(t, err)
 
-		if tries != 0 {
-			t.Errorf("unexpected number of tries. expected %v, got %v", 0, tries)
+			if attempts != 0 {
+				t.Errorf("unexpected number of attempts. expected %v, got %v", 0, attempts)
+			}
 		}
 	})
 
-	t.Run("second try should return 1 previous try", func(t *testing.T) {
-		_, tries, err := ds.AddTry(key)
+	t.Run("same key should return incremented attempt on calls after incrementing", func(t *testing.T) {
+		for i := 1; i < 5; i++ {
+			assertNilError(t, ds.IncAttempt(key))
+			_, attempts, err := ds.LastAttempt(key)
+			assertNilError(t, err)
 
-		assertNilError(t, err)
-
-		if tries != 1 {
-			t.Errorf("unexpected number of tries. expected %v, got %v", 1, tries)
-		}
-	})
-
-	t.Run("another key should again return 0 tries", func(t *testing.T) {
-		_, tries, err := ds.AddTry(key + "2")
-
-		assertNilError(t, err)
-
-		if tries != 0 {
-			t.Errorf("unexpected number of tries. expected %v, got %v", 0, tries)
+			if attempts != i {
+				t.Errorf("unexpected number of attempts. expected %v, got %v", i, attempts)
+			}
 		}
 	})
 }
@@ -212,8 +206,7 @@ func TestDatastore_Cleanup(t *testing.T) {
 	assertNilError(t, err)
 	_, err = ds.StoreItem(felix.Item{URL: "http://example.com"})
 	assertNilError(t, err)
-	_, _, err = ds.AddTry(tryKey)
-	assertNilError(t, err)
+	assertNilError(t, ds.IncAttempt(tryKey))
 
 	t.Run("should not remove entries in maxAge window", func(t *testing.T) {
 		err := ds.Cleanup(10 * time.Hour)
@@ -223,10 +216,11 @@ func TestDatastore_Cleanup(t *testing.T) {
 		assertNilError(t, err)
 		links, err := ds.GetLinks(1 * time.Hour)
 		assertNilError(t, err)
-		_, tries, err := ds.AddTry(tryKey)
+		_, attempts, err := ds.LastAttempt(tryKey)
 		assertNilError(t, err)
+		assertNilError(t, ds.IncAttempt(tryKey))
 
-		if len(items) != 1 || len(links) != 1 || tries != 1 {
+		if len(items) != 1 || len(links) != 1 || attempts != 1 {
 			t.Error("inconsistent state. cleanup should not have removed anything.")
 		}
 	})
@@ -239,10 +233,11 @@ func TestDatastore_Cleanup(t *testing.T) {
 		assertNilError(t, err)
 		links, err := ds.GetLinks(1 * time.Hour)
 		assertNilError(t, err)
-		_, tries, err := ds.AddTry(tryKey)
+		_, attempts, err := ds.LastAttempt(tryKey)
 		assertNilError(t, err)
+		assertNilError(t, ds.IncAttempt(tryKey))
 
-		if len(items) != 0 || len(links) != 0 || tries != 0 {
+		if len(items) != 0 || len(links) != 0 || attempts != 0 {
 			t.Error("inconsistent state. cleanup should have removed everything.")
 		}
 	})

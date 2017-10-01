@@ -18,19 +18,18 @@ import (
 // TODO: too much boilerplate... rewrite this using storm? (https://github.com/asdine/storm)
 
 var (
-	tryBucket  = []byte("tries")
-	itemBucket = []byte("items")
-	linkBucket = []byte("links")
+	attemptBucket = []byte("attempts")
+	itemBucket    = []byte("items")
+	linkBucket    = []byte("links")
 )
 
 type datastore struct {
 	db *bolt.DB
 }
 
-type tryEntity struct {
-	Key     string
-	LastTry time.Time
-	Tries   int
+type attemptEntity struct {
+	Last  time.Time
+	Count int
 }
 
 type itemEntity struct {
@@ -47,35 +46,21 @@ func (ds datastore) Close() error {
 	return ds.db.Close()
 }
 
-// TODO: dont increment tries when no try was really made (e.g. on restart)
-func (ds datastore) AddTry(key string) (last time.Time, tries int, err error) {
-	var lastTry tryEntity
+func (ds datastore) LastAttempt(key string) (time.Time, int, error) {
+	var attempt attemptEntity
 
-	err = ds.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(tryBucket)
+	err := ds.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(attemptBucket)
 		buf := b.Get([]byte(key))
 
-		if buf != nil {
-			if err := gob.NewDecoder(bytes.NewReader(buf)).Decode(&lastTry); err != nil {
-				return errors.Wrap(err, "could not decode entity")
-			}
-		} else {
-			// Create new entity if none exists
-			lastTry = tryEntity{
-				Key:     key,
-				LastTry: time.Time{},
-				Tries:   0,
-			}
+		if buf == nil {
+			attempt.Last = time.Time{}
+			attempt.Count = 0
+			return nil
 		}
 
-		err := put(b, []byte(key), tryEntity{
-			Key:     key,
-			LastTry: time.Now(),
-			Tries:   lastTry.Tries + 1,
-		})
-
-		if err != nil {
-			return errors.Wrap(err, "could not store entity")
+		if err := gob.NewDecoder(bytes.NewReader(buf)).Decode(&attempt); err != nil {
+			return errors.Wrap(err, "could not decode entity")
 		}
 
 		return nil
@@ -85,7 +70,30 @@ func (ds datastore) AddTry(key string) (last time.Time, tries int, err error) {
 		return time.Time{}, 0, err
 	}
 
-	return lastTry.LastTry, lastTry.Tries, nil
+	return attempt.Last, attempt.Count, nil
+}
+
+func (ds datastore) IncAttempt(key string) error {
+	return ds.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(attemptBucket)
+		buf := b.Get([]byte(key))
+
+		var attempt = attemptEntity{Last: time.Time{}, Count: 0}
+		if buf != nil {
+			if err := gob.NewDecoder(bytes.NewReader(buf)).Decode(&attempt); err != nil {
+				return errors.Wrap(err, "could not decode entity")
+			}
+		}
+
+		attempt.Count++
+		attempt.Last = time.Now()
+
+		if err := put(b, []byte(key), attempt); err != nil {
+			return errors.Wrap(err, "could not store entity")
+		}
+
+		return nil
+	})
 }
 
 func (ds datastore) StoreItem(item felix.Item) (exists bool, e error) {
@@ -238,14 +246,14 @@ func (ds datastore) Cleanup(maxAge time.Duration) error {
 			}
 		}
 
-		tryCursor := tx.Bucket(tryBucket).Cursor()
+		tryCursor := tx.Bucket(attemptBucket).Cursor()
 		for k, v := tryCursor.First(); k != nil; k, v = tryCursor.Next() {
-			var entity tryEntity
+			var entity attemptEntity
 			if err := gob.NewDecoder(bytes.NewReader(v)).Decode(&entity); err != nil {
 				return errors.Wrap(err, "could not decode entity")
 			}
 
-			if entity.LastTry.Before(cutoff) {
+			if entity.Last.Before(cutoff) {
 				tryCursor.Delete()
 			}
 		}
@@ -275,7 +283,7 @@ func NewDatastore(filename string) (felix.Datastore, error) {
 	}
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		for _, name := range [][]byte{tryBucket, itemBucket, linkBucket} {
+		for _, name := range [][]byte{attemptBucket, itemBucket, linkBucket} {
 			if _, err := tx.CreateBucketIfNotExists(name); err != nil {
 				return errors.Wrapf(err, "could not create bucket %s", name)
 			}

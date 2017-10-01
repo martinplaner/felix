@@ -12,27 +12,35 @@ import (
 
 // Fetcher is the default fetcher.
 type Fetcher struct {
-	url       string
-	source    Source
-	scanner   Scanner
-	nextFetch NextFetchFunc
-	items     chan<- Item
-	links     chan<- Link
-	log       Logger
+	url     string
+	source  Source
+	scanner Scanner
+	attempt Attempter
+	items   chan<- Item
+	links   chan<- Link
+	log     Logger
+}
+
+// Attempter is used by Fetcher to determine if and when the next fetch attempt should be made.
+type Attempter interface {
+	// Next returns if and when the next attempt is scheduled
+	Next(key string) (bool, time.Duration, error)
+	// Inc increments the number of attempts by 1
+	Inc(key string) error
 }
 
 // NextFetchFunc returns if the fetcher should continue to fetch and if so, how long to wait before the next attempt.
 type NextFetchFunc func(url string) (bool, time.Duration)
 
-func NewFetcher(url string, source Source, scanner Scanner, nextFetch NextFetchFunc, items chan<- Item, links chan<- Link) *Fetcher {
+func NewFetcher(url string, source Source, scanner Scanner, attempt Attempter, items chan<- Item, links chan<- Link) *Fetcher {
 	return &Fetcher{
-		url:       url,
-		source:    source,
-		scanner:   scanner,
-		nextFetch: nextFetch,
-		items:     items,
-		links:     links,
-		log:       &NopLogger{},
+		url:     url,
+		source:  source,
+		scanner: scanner,
+		attempt: attempt,
+		items:   items,
+		links:   links,
+		log:     &NopLogger{},
 	}
 }
 
@@ -54,7 +62,11 @@ func (f *Fetcher) Start(quit <-chan struct{}) {
 
 L:
 	for {
-		shouldContinue, nextFetch := f.nextFetch(f.url)
+		shouldContinue, nextFetch, err := f.attempt.Next(f.url)
+		if err != nil {
+			f.log.Error("could not get next attempt", "err", err)
+			return
+		}
 		if !shouldContinue {
 			f.log.Info("will not try to continue. quitting.", "url", f.url)
 			return
@@ -64,6 +76,10 @@ L:
 		select {
 		// TODO: abstract time stdlib away into clock, etc. for testing
 		case <-time.After(nextFetch):
+			if err := f.attempt.Inc(f.url); err != nil {
+				f.log.Error("could not get increment attempt count", "err", err)
+				return
+			}
 			ctx, cancel := context.WithTimeout(bg, 15*time.Second)
 			e.EmitFollow(f.url)
 
@@ -102,8 +118,40 @@ L:
 	}
 }
 
-// FibWait returns a NextFetchFunc that
-func FibWait(ds Datastore, baseInterval time.Duration, maxTries int) NextFetchFunc {
+// attempt is the default Datastore-backed Attempter
+type attempt struct {
+	ds   Datastore
+	next func(last time.Time, attempts int) (bool, time.Duration)
+}
+
+func (a attempt) Next(key string) (bool, time.Duration, error) {
+	last, attempts, err := a.ds.LastAttempt(key)
+	if err != nil {
+		return false, 0, err
+	}
+
+	wait, untilNext := a.next(last, attempts)
+	return wait, untilNext, nil
+}
+
+func (a attempt) Inc(key string) error {
+	return a.ds.IncAttempt(key)
+}
+
+func PeriodicAttempter(ds Datastore, fetchInterval time.Duration) Attempter {
+	next := func(last time.Time, attempts int) (bool, time.Duration) {
+		nextTry := last.Add(fetchInterval)
+		untilNext := nextTry.Sub(time.Now())
+		return true, untilNext
+	}
+
+	return &attempt{
+		ds:   ds,
+		next: next,
+	}
+}
+
+func FibAttempter(ds Datastore, baseInterval time.Duration, maxAttempts int) Attempter {
 	var fib func(n int) int
 	fib = func(n int) int {
 		if n < 2 {
@@ -112,38 +160,19 @@ func FibWait(ds Datastore, baseInterval time.Duration, maxTries int) NextFetchFu
 		return fib(n-2) + fib(n-1)
 	}
 
-	return func(url string) (bool, time.Duration) {
-		lastTry, previousTries, err := ds.AddTry(url)
-
-		if err != nil {
-			// TODO: re-evaluate this decision. this silently hides an error :-/
-			return true, baseInterval
+	next := func(last time.Time, attempts int) (bool, time.Duration) {
+		if attempts >= maxAttempts {
+			return false, 0
 		}
 
-		if previousTries >= maxTries {
-			return false, time.Duration(0)
-		}
-
-		interval := time.Duration(fib(previousTries)) * baseInterval
-		nextTry := lastTry.Add(interval)
+		interval := time.Duration(fib(attempts)) * baseInterval
+		nextTry := last.Add(interval)
 		untilNext := nextTry.Sub(time.Now())
-
 		return true, untilNext
 	}
-}
 
-func PeriodicWait(ds Datastore, fetchInterval time.Duration) NextFetchFunc {
-	return func(url string) (bool, time.Duration) {
-		lastTry, _, err := ds.AddTry(url)
-
-		if err != nil {
-			// TODO: re-evaluate this decision. this silently hides an error :-/
-			return true, fetchInterval
-		}
-
-		nextTry := lastTry.Add(fetchInterval)
-		untilNext := nextTry.Sub(time.Now())
-
-		return true, untilNext
+	return &attempt{
+		ds:   ds,
+		next: next,
 	}
 }

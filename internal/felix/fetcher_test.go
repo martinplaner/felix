@@ -15,6 +15,48 @@ import (
 	"time"
 )
 
+func TestFetcher(t *testing.T) {
+	items := make(chan Item)
+	links := make(chan Link)
+
+	scanSource := &mockScanSource{}
+	attempt := &mockAttempter{1}
+
+	logBuf := &bytes.Buffer{}
+	log := NewLogger()
+	log.SetOutput(logBuf)
+
+	fetcher := &Fetcher{
+		url:     "baseURL",
+		source:  scanSource,
+		scanner: scanSource,
+		items:   items,
+		links:   links,
+		log:     log,
+		attempt: attempt,
+	}
+
+	quit := make(chan struct{})
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		fetcher.Start(quit)
+		wg.Done()
+	}()
+
+	<-items
+
+	close(quit)
+	wg.Wait()
+
+	for _, s := range []string{"tempSourceError", "otherSourceError", "scanError"} {
+		if !strings.Contains(logBuf.String(), s) {
+			t.Errorf("could not find %q in log output", s)
+		}
+	}
+}
+
 type mockScanSource struct {
 	sourceCalls int // number of times Source.Get was called
 	scanCalls   int // number of times Scanner.Scan was called
@@ -73,55 +115,19 @@ func (e *tempNetError) Error() string {
 	return e.msg
 }
 
-func TestFetcher(t *testing.T) {
-	items := make(chan Item)
-	links := make(chan Link)
+type mockAttempter struct {
+	attempts int
+}
 
-	scanSource := &mockScanSource{}
-
-	nextFetch := func(n int) func(url string) (bool, time.Duration) {
-		i := 0
-		return func(url string) (bool, time.Duration) {
-			defer func() { i++ }()
-			if i < n {
-				return true, 0
-			} else {
-				return true, 1000 * time.Hour
-			}
-		}
-	}(1)
-
-	logBuf := &bytes.Buffer{}
-	log := NewLogger()
-	log.SetOutput(logBuf)
-
-	fetcher := &Fetcher{
-		url:       "baseURL",
-		source:    scanSource,
-		scanner:   scanSource,
-		items:     items,
-		links:     links,
-		log:       log,
-		nextFetch: nextFetch,
+func (a *mockAttempter) Next(key string) (bool, time.Duration, error) {
+	if a.attempts > 0 {
+		a.attempts--
+		return true, 0, nil
+	} else {
+		return false, 0, nil
 	}
+}
 
-	quit := make(chan struct{})
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-	go func() {
-		fetcher.Start(quit)
-		wg.Done()
-	}()
-
-	<-items
-
-	close(quit)
-	wg.Wait()
-
-	for _, s := range []string{"tempSourceError", "otherSourceError", "scanError"} {
-		if !strings.Contains(logBuf.String(), s) {
-			t.Errorf("could not find %q in log output", s)
-		}
-	}
+func (mockAttempter) Inc(key string) error {
+	return nil
 }

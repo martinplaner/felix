@@ -7,8 +7,8 @@ package felix
 import "time"
 
 type Datastore interface {
-	// TODO: rename 'try' to 'attempt'?
-	AddTry(key string) (last time.Time, tries int, err error)
+	LastAttempt(key string) (time.Time, int, error)
+	IncAttempt(key string) error
 	StoreItem(item Item) (bool, error)
 	StoreLink(link Link) (bool, error)
 	GetItems(maxAge time.Duration) ([]Item, error)
