@@ -1,0 +1,27 @@
+fetchInterval: 1h5m
+cleanupInterval: 10m
+cleanupMaxAge: 12h
+
+feeds:
+  - type: rss
+    url: http://example.com/rss.php
+  - type: rss
+    url: http://example.org/feed
+    fetchInterval: 1h30m
+
+itemFilters:
+  - type: title
+    titles:
+      - A Title
+      - Another Title
+      - Ein schöner Titel
+
+linkFilters:
+  - type: domain
+    domains:
+      - example.com
+      - example.org
+  - type: regex
+    exprs:
+      - .*\.mkv$
+      - .*\.mp4$
