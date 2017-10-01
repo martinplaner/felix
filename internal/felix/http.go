@@ -16,13 +16,10 @@ type Feed struct {
 	Items   []Item
 }
 
-func TitleHandler(titles ...string) http.Handler {
+func StringHandler(s string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
-
-		for _, title := range titles {
-			fmt.Fprintf(w, "%s\n", title)
-		}
+		fmt.Fprint(w, s)
 	})
 }
 
