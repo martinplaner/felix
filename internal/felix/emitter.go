@@ -39,7 +39,7 @@ func (e *emitter) HasFollow() bool {
 
 // NextFollow returns the next follow URL.
 //
-// This funtion panics if a follow URL is not available,
+// This function panics if a follow URL is not available,
 // therefore HasFollow must be called beforehand.
 func (e *emitter) NextFollow() string {
 	next := e.follows[0]

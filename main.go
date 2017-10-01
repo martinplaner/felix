@@ -38,16 +38,13 @@ var (
 	newLinks      = make(chan felix.Link)
 	filteredItems = make(chan felix.Item)
 	filteredLinks = make(chan felix.Link)
-
-	// TODO: remove this hack
-	titles []string
 )
 
 func main() {
 	printVersion()
 
 	configfile := flag.String("config", "config.yml", "location of the config file")
-	datadir := flag.String("datadir", ".", "dir for auxilliary data")
+	datadir := flag.String("datadir", ".", "dir for auxiliary data")
 	flag.Parse()
 
 	// Initialize config and shared components
@@ -191,7 +188,6 @@ func initItemFilters(config felix.Config) []felix.ItemFilter {
 			}
 
 			itemFilters = append(itemFilters, felix.ItemTitleFilter(fc.Titles...))
-			titles = fc.Titles
 
 		default:
 			log.Fatal("unsupported item filter type", "type", f.Type)

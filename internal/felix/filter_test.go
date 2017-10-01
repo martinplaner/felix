@@ -13,7 +13,7 @@ func TestFilterItems(t *testing.T) {
 	in := make(chan Item, 10)
 	out := make(chan Item, 10)
 
-	items := []Item{Item{Title: "test"}, Item{Title: "foobar"}}
+	items := []Item{{Title: "test"}, {Title: "foobar"}}
 
 	go FilterItems(in, out, []ItemFilter{}...)
 
@@ -89,27 +89,27 @@ func TestItemTitleFilter(t *testing.T) {
 		{
 			desc:     "empty filter criteria",
 			filter:   ItemTitleFilter(),
-			input:    []Item{Item{Title: "a title"}, Item{Title: "another title"}},
+			input:    []Item{{Title: "a title"}, {Title: "another title"}},
 			expected: []Item{},
 		},
 		{
 			// TODO: should this even be allowed?
 			desc:     "empty string matches everything",
 			filter:   ItemTitleFilter(""),
-			input:    []Item{Item{Title: "a title"}, Item{Title: "another title"}},
-			expected: []Item{Item{Title: "a title"}, Item{Title: "another title"}},
+			input:    []Item{{Title: "a title"}, {Title: "another title"}},
+			expected: []Item{{Title: "a title"}, {Title: "another title"}},
 		},
 		{
 			desc:     "matching filter",
 			filter:   ItemTitleFilter("title", "another"),
-			input:    []Item{Item{Title: "a title"}, Item{Title: "another title"}},
-			expected: []Item{Item{Title: "a title"}, Item{Title: "another title"}},
+			input:    []Item{{Title: "a title"}, {Title: "another title"}},
+			expected: []Item{{Title: "a title"}, {Title: "another title"}},
 		},
 		{
 			desc:     "special characters",
 			filter:   ItemTitleFilter("A Title & With: Special Characters", "@deutscher titel"),
-			input:    []Item{Item{Title: "A.title.with.special.characters"}, Item{Title: "Ein deutscher Titel"}, Item{Title: "Un intitulé"}},
-			expected: []Item{Item{Title: "A.title.with.special.characters"}, Item{Title: "Ein deutscher Titel"}},
+			input:    []Item{{Title: "A.title.with.special.characters"}, {Title: "Ein deutscher Titel"}, {Title: "Un intitulé"}},
+			expected: []Item{{Title: "A.title.with.special.characters"}, {Title: "Ein deutscher Titel"}},
 		},
 	}
 
@@ -132,7 +132,7 @@ func TestFilterLinks(t *testing.T) {
 	in := make(chan Link, 10)
 	out := make(chan Link, 10)
 
-	links := []Link{Link{Title: "test"}, Link{Title: "foobar"}}
+	links := []Link{{Title: "test"}, {Title: "foobar"}}
 
 	go FilterLinks(in, out, []LinkFilter{}...)
 
@@ -232,26 +232,26 @@ func TestLinkDomainFilter(t *testing.T) {
 		{
 			desc:     "empty filter criteria",
 			filter:   LinkDomainFilter(),
-			input:    []Link{Link{URL: "http://example.com/test"}},
+			input:    []Link{{URL: "http://example.com/test"}},
 			expected: []Link{},
 		},
 		{
 			desc:     "matching filter",
 			filter:   LinkDomainFilter("example.com"),
-			input:    []Link{Link{URL: "http://example.com/test1"}, Link{URL: "feed://example.com/test2"}, Link{URL: "http://example.org/testOrg"}},
-			expected: []Link{Link{URL: "http://example.com/test1"}, Link{URL: "feed://example.com/test2"}},
+			input:    []Link{{URL: "http://example.com/test1"}, {URL: "feed://example.com/test2"}, {URL: "http://example.org/testOrg"}},
+			expected: []Link{{URL: "http://example.com/test1"}, {URL: "feed://example.com/test2"}},
 		},
 		{
 			desc:     "untrimmed filter criteria",
 			filter:   LinkDomainFilter("  example.com     "),
-			input:    []Link{Link{URL: "http://example.com/test1"}, Link{URL: "http://example.com/test2"}, Link{URL: "http://example.org/testOrg"}},
-			expected: []Link{Link{URL: "http://example.com/test1"}, Link{URL: "http://example.com/test2"}},
+			input:    []Link{{URL: "http://example.com/test1"}, {URL: "http://example.com/test2"}, {URL: "http://example.org/testOrg"}},
+			expected: []Link{{URL: "http://example.com/test1"}, {URL: "http://example.com/test2"}},
 		},
 		{
 			desc:     "invalid URLs",
 			filter:   LinkDomainFilter("example.com"),
-			input:    []Link{Link{URL: "http://example.com/test1"}, Link{URL: "example.com/test2"}, Link{URL: "http:////example.com?/test3"}},
-			expected: []Link{Link{URL: "http://example.com/test1"}},
+			input:    []Link{{URL: "http://example.com/test1"}, {URL: "example.com/test2"}, {URL: "http:////example.com?/test3"}},
+			expected: []Link{{URL: "http://example.com/test1"}},
 		},
 	}
 
@@ -291,19 +291,19 @@ func TestLinkURLRegexFilter(t *testing.T) {
 		{
 			desc:     "empty filter criteria",
 			filter:   newFilter(),
-			input:    []Link{Link{URL: "http://example.com/test.mp4"}},
+			input:    []Link{{URL: "http://example.com/test.mp4"}},
 			expected: []Link{},
 		},
 		{
 			desc:     "matching filter",
 			filter:   newFilter(`.*\.mp4$`, `.*\.mkv$`),
-			input:    []Link{Link{URL: "http://example.com/test.mp4"}, Link{URL: "http://example.com/test.mkv"}},
-			expected: []Link{Link{URL: "http://example.com/test.mp4"}, Link{URL: "http://example.com/test.mkv"}},
+			input:    []Link{{URL: "http://example.com/test.mp4"}, {URL: "http://example.com/test.mkv"}},
+			expected: []Link{{URL: "http://example.com/test.mp4"}, {URL: "http://example.com/test.mkv"}},
 		},
 		{
 			desc:     "non-matching filter",
 			filter:   newFilter(`.*\.mp4`),
-			input:    []Link{Link{URL: "http://example.com/test.mkv"}},
+			input:    []Link{{URL: "http://example.com/test.mkv"}},
 			expected: []Link{},
 		},
 	}
@@ -333,32 +333,32 @@ func TestLinkFilenameAsTitleFilter(t *testing.T) {
 		{
 			desc:     "valid filename",
 			filter:   LinkFilenameAsTitleFilter(false),
-			input:    []Link{Link{Title: "title", URL: "http://example.com/image.jpg"}, Link{Title: "title", URL: "http://example.com/dl/testfile"}},
-			expected: []Link{Link{Title: "image.jpg", URL: "http://example.com/image.jpg"}, Link{Title: "testfile", URL: "http://example.com/dl/testfile"}},
+			input:    []Link{{Title: "title", URL: "http://example.com/image.jpg"}, {Title: "title", URL: "http://example.com/dl/testfile"}},
+			expected: []Link{{Title: "image.jpg", URL: "http://example.com/image.jpg"}, {Title: "testfile", URL: "http://example.com/dl/testfile"}},
 		},
 		{
 			desc:     "strip file extension",
 			filter:   LinkFilenameAsTitleFilter(true),
-			input:    []Link{Link{Title: "title", URL: "http://example.com/image.jpg"}, Link{Title: "title", URL: "http://example.com/dl/testfile"}},
-			expected: []Link{Link{Title: "image", URL: "http://example.com/image.jpg"}, Link{Title: "testfile", URL: "http://example.com/dl/testfile"}},
+			input:    []Link{{Title: "title", URL: "http://example.com/image.jpg"}, {Title: "title", URL: "http://example.com/dl/testfile"}},
+			expected: []Link{{Title: "image", URL: "http://example.com/image.jpg"}, {Title: "testfile", URL: "http://example.com/dl/testfile"}},
 		},
 		{
 			desc:     "empty title and url",
 			filter:   LinkFilenameAsTitleFilter(false),
-			input:    []Link{Link{Title: "", URL: ""}},
-			expected: []Link{Link{Title: "", URL: ""}},
+			input:    []Link{{Title: "", URL: ""}},
+			expected: []Link{{Title: "", URL: ""}},
 		},
 		{
 			desc:     "empty path in url",
 			filter:   LinkFilenameAsTitleFilter(false),
-			input:    []Link{Link{Title: "title", URL: "http://example.com"}, Link{Title: "title", URL: "http://example.com/"}},
-			expected: []Link{Link{Title: "title", URL: "http://example.com"}, Link{Title: "title", URL: "http://example.com/"}},
+			input:    []Link{{Title: "title", URL: "http://example.com"}, {Title: "title", URL: "http://example.com/"}},
+			expected: []Link{{Title: "title", URL: "http://example.com"}, {Title: "title", URL: "http://example.com/"}},
 		},
 		{
 			desc:     "non-empty path but without filename",
 			filter:   LinkFilenameAsTitleFilter(false),
-			input:    []Link{Link{Title: "title", URL: "http://example.com/category/announcements/"}, Link{Title: "title", URL: "http://example.com/news/   "}},
-			expected: []Link{Link{Title: "title", URL: "http://example.com/category/announcements/"}, Link{Title: "title", URL: "http://example.com/news/   "}},
+			input:    []Link{{Title: "title", URL: "http://example.com/category/announcements/"}, {Title: "title", URL: "http://example.com/news/   "}},
+			expected: []Link{{Title: "title", URL: "http://example.com/category/announcements/"}, {Title: "title", URL: "http://example.com/news/   "}},
 		},
 	}
 
