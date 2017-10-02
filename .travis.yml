@@ -1,8 +1,8 @@
 language: go
 
-install: go get -t -v ./...
+install: go get -v -t -u ./...
 
-script: ./test.sh
+script: ./coverage.sh
 
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
+  - [ "$TRAVIS_TAG" = "" ] && bash <(curl -s https://codecov.io/bash) || echo 'Tag build detected. Not uploading coverage (codecov).'
