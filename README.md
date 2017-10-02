@@ -11,11 +11,13 @@ The **fe**ed **li**nk e**x**tractor.
 
 Felix is a tool for fetching, extracting, filtering and aggregating links from multiple feed sources (RSS feeds, HTML pages, etc.).
 
+![overview](doc/overview.png)
+
 ## Changelog
 
-See [CHANGELOG.md](https://github.com/martinplaner/felix/blob/master/CHANGELOG.md).
+See [CHANGELOG](CHANGELOG.md).
 
-For some vague notes about planned features and changes, see also [TODO.md](https://github.com/martinplaner/felix/blob/master/TODO.md).
+For some vague notes about planned features and changes, see also [TODO](TODO.md).
 
 ## Installation
 
