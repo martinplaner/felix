@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Currently no changes or additions.
 
+### Added
+
+- Made `FeedOutputMaxAge`, the maximum age for links included in the output feed, configurable.
+
 ### Fixed
 
 - Only report new links the first time they are found.

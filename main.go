@@ -97,11 +97,11 @@ func main() {
 		wgFeeds.Done()
 	}()
 
-	http.Handle("/", felix.FeedHandler(db))
+	http.Handle("/", felix.FeedHandler(db, config.FeedOutputMaxAge))
 	http.Handle("/filters", felix.StringHandler(felix.FilterString(itemFilters, linkFilters)))
 
-	// TODO: make host and port configurable
-	server := &http.Server{Addr: fmt.Sprintf("%s:%d", "", 6554)}
+	// TODO: make host configurable
+	server := &http.Server{Addr: fmt.Sprintf("%s:%d", "", config.Port)}
 
 	go func() {
 		log.Info("starting http server", "addr", server.Addr)
