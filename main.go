@@ -123,9 +123,12 @@ func main() {
 
 	// Insert filtered links into datastore
 	for link := range filteredLinks {
-		log.Info("found new link", "url", link.URL)
-		if _, err := db.StoreLink(link); err != nil {
+		exists, err := db.StoreLink(link)
+		if err != nil {
 			log.Error("could not store link", "err", err, "link", link)
+		}
+		if !exists {
+			log.Info("found new link", "url", link.URL)
 		}
 	}
 

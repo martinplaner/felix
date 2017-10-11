@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Currently no changes or additions.
 
+### Fixed
+
+- Only report new links the first time they are found.
+
 ## [0.2.0] - 2017-10-01
 
 ### Added
