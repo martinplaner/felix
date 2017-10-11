@@ -1,12 +1,12 @@
 builds:
   - binary: felix
     goos:
-      - windows
-      - darwin
       - linux
     goarch:
       - amd64
     ldflags: -s -w -X main.Version={{.Version}} -X main.GitSummary={{.Commit}} -X main.BuildDate={{.Date}}
+    env:
+      - CGO_ENABLED=0
 
 archive:
   format: tar.gz
