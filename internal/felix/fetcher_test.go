@@ -15,6 +15,23 @@ import (
 	"time"
 )
 
+func TestNewFetcher(t *testing.T) {
+	f := NewFetcher("", nil, nil, nil, nil, nil)
+	if f == nil {
+		t.Error("NewFetcher() == nil")
+	}
+}
+
+func TestFetcher_SetLogger(t *testing.T) {
+	f := NewFetcher("", nil, nil, nil, nil, nil)
+	l := NewLogger()
+	f.SetLogger(l)
+
+	if f.log != l {
+		t.Error("logger not set correctly")
+	}
+}
+
 func TestFetcher(t *testing.T) {
 	items := make(chan Item)
 	links := make(chan Link)
@@ -130,4 +147,77 @@ func (a *mockAttempter) Next(key string) (bool, time.Duration, error) {
 
 func (mockAttempter) Inc(key string) error {
 	return nil
+}
+
+func TestNextAttemptFunc(t *testing.T) {
+	testCases := []struct {
+		desc          string
+		next          NextAttemptFunc
+		last          time.Time
+		attempts      int
+		shouldAttempt bool
+		check         func(time.Duration) bool
+	}{
+		{
+			desc:          "first periodic attempt (no wait)",
+			next:          PeriodicNextAttemptFunc(1 * time.Hour),
+			last:          time.Time{},
+			attempts:      0,
+			shouldAttempt: true,
+			check:         func(d time.Duration) bool { return d < 0 },
+		},
+		{
+			desc:          "second periodic attempt (wait)",
+			next:          PeriodicNextAttemptFunc(1 * time.Hour),
+			last:          time.Now().Add(-5 * time.Minute),
+			attempts:      1,
+			shouldAttempt: true,
+			check:         func(d time.Duration) bool { return d > 0 },
+		},
+		{
+			desc:          "first fibonacci attempt (no wait)",
+			next:          FibNextAttemptFunc(1*time.Hour, 5),
+			last:          time.Time{},
+			attempts:      0,
+			shouldAttempt: true,
+			check:         func(d time.Duration) bool { return d < 0 },
+		},
+		{
+			desc:          "first fibonacci attempt (wait)",
+			next:          FibNextAttemptFunc(1*time.Hour, 5),
+			last:          time.Now().Add(-5 * time.Minute),
+			attempts:      1,
+			shouldAttempt: true,
+			check:         func(d time.Duration) bool { return d > 0 },
+		},
+		{
+			desc:          "fourth fibonacci attempt (2 * baseInterval)",
+			next:          FibNextAttemptFunc(1*time.Hour, 5),
+			last:          time.Now(),
+			attempts:      3,
+			shouldAttempt: true,
+			check:         func(d time.Duration) bool { return d > 118*time.Minute && d < 122*time.Minute },
+		},
+		{
+			desc:          "nth fibonacci attempt (attempts > maxAttempts)",
+			next:          FibNextAttemptFunc(1*time.Hour, 5),
+			last:          time.Now(),
+			attempts:      10,
+			shouldAttempt: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			shouldAttempt, waitFor := tc.next(tc.last, tc.attempts)
+
+			if shouldAttempt != tc.shouldAttempt {
+				t.Errorf("shouldAttempt = %v, expected %v", shouldAttempt, tc.shouldAttempt)
+			}
+
+			if tc.check != nil && !tc.check(waitFor) {
+				t.Errorf("check(waitFor = %v) failed", waitFor)
+			}
+		})
+	}
 }

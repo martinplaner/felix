@@ -167,7 +167,7 @@ func initFeedFetchers(config felix.Config, data felix.Datastore) []*felix.Fetche
 				fetchInterval = config.FetchInterval
 			}
 
-			nextFetch := felix.PeriodicAttempter(data, fetchInterval)
+			nextFetch := felix.NewAttempter(data, felix.PeriodicNextAttemptFunc(fetchInterval))
 			f := felix.NewFetcher(fc.URL, source, rss.ItemScanner, nextFetch, newItems, newLinks)
 			f.SetLogger(log)
 			feedFetchers = append(feedFetchers, f)
@@ -253,7 +253,7 @@ func runPageFetchers(config felix.Config, db felix.Datastore, wg *sync.WaitGroup
 		for _, item := range oldItems {
 			// TODO: Make maxTries configurable
 			log.Info("restarting item fetcher", "url", item.URL)
-			nextFetch := felix.FibAttempter(db, config.FetchInterval, 7)
+			nextFetch := felix.NewAttempter(db, felix.FibNextAttemptFunc(config.FetchInterval, 7))
 			f := felix.NewFetcher(item.URL, source, html.LinkScanner, nextFetch, newItems, newLinks)
 			f.SetLogger(log)
 
@@ -279,7 +279,7 @@ func runPageFetchers(config felix.Config, db felix.Datastore, wg *sync.WaitGroup
 		}
 
 		log.Info("starting new item fetcher", "url", item.URL)
-		nextFetch := felix.FibAttempter(db, config.FetchInterval, 7)
+		nextFetch := felix.NewAttempter(db, felix.FibNextAttemptFunc(config.FetchInterval, 7))
 		f := felix.NewFetcher(item.URL, source, html.LinkScanner, nextFetch, newItems, newLinks)
 		f.SetLogger(log)
 

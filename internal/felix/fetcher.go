@@ -29,8 +29,8 @@ type Attempter interface {
 	Inc(key string) error
 }
 
-// NextFetchFunc returns if the fetcher should continue to fetch and if so, how long to wait before the next attempt.
-type NextFetchFunc func(url string) (bool, time.Duration)
+// A NextAttemptFunc returns if and when the next attempt is scheduled for the given key.
+type NextAttemptFunc func(last time.Time, attempts int) (bool, time.Duration)
 
 // NewFetcher creates a new Fetcher.
 func NewFetcher(url string, source Source, scanner Scanner, attempt Attempter, items chan<- Item, links chan<- Link) *Fetcher {
@@ -124,7 +124,7 @@ L:
 // attempt is the default Datastore-backed Attempter
 type attempt struct {
 	ds   Datastore
-	next func(last time.Time, attempts int) (bool, time.Duration)
+	next NextAttemptFunc
 }
 
 func (a attempt) Next(key string) (bool, time.Duration, error) {
@@ -141,23 +141,26 @@ func (a attempt) Inc(key string) error {
 	return a.ds.IncAttempt(key)
 }
 
-// PeriodicAttempter creates a new Attempter for periodic attempts with a fixed interval.
-func PeriodicAttempter(ds Datastore, fetchInterval time.Duration) Attempter {
-	next := func(last time.Time, attempts int) (bool, time.Duration) {
-		nextTry := last.Add(fetchInterval)
-		untilNext := time.Until(nextTry)
-		return true, untilNext
-	}
-
+// creates a new Attempter with the given NextFunc.
+func NewAttempter(ds Datastore, next NextAttemptFunc) Attempter {
 	return &attempt{
 		ds:   ds,
 		next: next,
 	}
 }
 
-// FibAttempter creates a new Attempter for attempts with a fibonacci based backoff interval, up to maxAttempts.
-// The interval length is defined by baseInterval & fib(attempt count).
-func FibAttempter(ds Datastore, baseInterval time.Duration, maxAttempts int) Attempter {
+// PeriodicNextAttemptFunc creates a new NextAttemptFunc for periodic attempts with a fixed interval.
+func PeriodicNextAttemptFunc(fetchInterval time.Duration) NextAttemptFunc {
+	return func(last time.Time, attempts int) (bool, time.Duration) {
+		nextTry := last.Add(fetchInterval)
+		untilNext := time.Until(nextTry)
+		return true, untilNext
+	}
+}
+
+// FibNextAttemptFunc creates a new NextAttemptFunc for attempts with a fibonacci based backoff interval, up to maxAttempts.
+// The interval length is defined by baseInterval * fib(attempt count).
+func FibNextAttemptFunc(baseInterval time.Duration, maxAttempts int) NextAttemptFunc {
 	var fib func(n int) int
 	fib = func(n int) int {
 		if n < 2 {
@@ -166,7 +169,7 @@ func FibAttempter(ds Datastore, baseInterval time.Duration, maxAttempts int) Att
 		return fib(n-2) + fib(n-1)
 	}
 
-	next := func(last time.Time, attempts int) (bool, time.Duration) {
+	return func(last time.Time, attempts int) (bool, time.Duration) {
 		if attempts >= maxAttempts {
 			return false, 0
 		}
@@ -175,10 +178,5 @@ func FibAttempter(ds Datastore, baseInterval time.Duration, maxAttempts int) Att
 		nextTry := last.Add(interval)
 		untilNext := time.Until(nextTry)
 		return true, untilNext
-	}
-
-	return &attempt{
-		ds:   ds,
-		next: next,
 	}
 }
