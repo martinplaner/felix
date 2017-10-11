@@ -1,7 +1,13 @@
 # ignore main binary
 /felix
 /felix.exe
+
+#ignore runtime and build artifacts
 /config.yml
+/coverage.txt
+/felix.db
+/dist
+
 
 # ignore Jetbrains IDE project files
 .idea
