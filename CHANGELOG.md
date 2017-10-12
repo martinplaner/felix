@@ -8,13 +8,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Currently no changes or additions.
 
+## [0.3.0] - 2017-10-12
+
 ### Added
 
-- Made `FeedOutputMaxAge`, the maximum age for links included in the output feed, configurable.
+- Made some previously hard-coded values configurable:
+    - `FeedOutputMaxAge`, the maximum age for links included in the output feed (default: 6h).
+    - `Port`, the TCP port the output feed should listen on (default: 6554).
+- Added overview diagram to README.md.
+- Automated binary releases (linux x86_64 only for now).
 
 ### Fixed
 
 - Only report new links the first time they are found.
+- Do not upload coverage for tag CI builds.
 
 ## [0.2.0] - 2017-10-01
 
@@ -40,3 +47,4 @@ This is the first working release.
 [Unreleased]: https://github.com/martinplaner/felix/tree/develop
 [0.1.0]: https://github.com/martinplaner/felix/releases/tag/v0.1.0
 [0.2.0]: https://github.com/martinplaner/felix/releases/tag/v0.2.0
+[0.3.0]: https://github.com/martinplaner/felix/releases/tag/v0.3.0
