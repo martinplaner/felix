@@ -24,12 +24,11 @@ func StringHandler(s string) http.Handler {
 	})
 }
 
-// FeedHandler serves the found links as an RSS feed.
-func FeedHandler(ds Datastore) http.Handler {
+// FeedHandler serves the found links (up to maxAge) as an RSS feed.
+func FeedHandler(ds Datastore, maxAge time.Duration) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		// TODO: make configurable
-		links, err := ds.GetLinks(3 * time.Hour)
+		links, err := ds.GetLinks(maxAge)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

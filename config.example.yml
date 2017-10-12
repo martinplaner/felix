@@ -1,4 +1,5 @@
 fetchInterval: 1h5m
+feedOutputMaxAge: 6h
 cleanupInterval: 10m
 cleanupMaxAge: 12h
 

@@ -97,11 +97,11 @@ func main() {
 		wgFeeds.Done()
 	}()
 
-	http.Handle("/", felix.FeedHandler(db))
+	http.Handle("/", felix.FeedHandler(db, config.FeedOutputMaxAge))
 	http.Handle("/filters", felix.StringHandler(felix.FilterString(itemFilters, linkFilters)))
 
-	// TODO: make host and port configurable
-	server := &http.Server{Addr: fmt.Sprintf("%s:%d", "", 6554)}
+	// TODO: make host configurable
+	server := &http.Server{Addr: fmt.Sprintf("%s:%d", "", config.Port)}
 
 	go func() {
 		log.Info("starting http server", "addr", server.Addr)
@@ -123,9 +123,12 @@ func main() {
 
 	// Insert filtered links into datastore
 	for link := range filteredLinks {
-		log.Info("found new link", "url", link.URL)
-		if _, err := db.StoreLink(link); err != nil {
+		exists, err := db.StoreLink(link)
+		if err != nil {
 			log.Error("could not store link", "err", err, "link", link)
+		}
+		if !exists {
+			log.Info("found new link", "url", link.URL)
 		}
 	}
 
@@ -164,7 +167,7 @@ func initFeedFetchers(config felix.Config, data felix.Datastore) []*felix.Fetche
 				fetchInterval = config.FetchInterval
 			}
 
-			nextFetch := felix.PeriodicAttempter(data, fetchInterval)
+			nextFetch := felix.NewAttempter(data, felix.PeriodicNextAttemptFunc(fetchInterval))
 			f := felix.NewFetcher(fc.URL, source, rss.ItemScanner, nextFetch, newItems, newLinks)
 			f.SetLogger(log)
 			feedFetchers = append(feedFetchers, f)
@@ -250,7 +253,7 @@ func runPageFetchers(config felix.Config, db felix.Datastore, wg *sync.WaitGroup
 		for _, item := range oldItems {
 			// TODO: Make maxTries configurable
 			log.Info("restarting item fetcher", "url", item.URL)
-			nextFetch := felix.FibAttempter(db, config.FetchInterval, 7)
+			nextFetch := felix.NewAttempter(db, felix.FibNextAttemptFunc(config.FetchInterval, 7))
 			f := felix.NewFetcher(item.URL, source, html.LinkScanner, nextFetch, newItems, newLinks)
 			f.SetLogger(log)
 
@@ -276,7 +279,7 @@ func runPageFetchers(config felix.Config, db felix.Datastore, wg *sync.WaitGroup
 		}
 
 		log.Info("starting new item fetcher", "url", item.URL)
-		nextFetch := felix.FibAttempter(db, config.FetchInterval, 7)
+		nextFetch := felix.NewAttempter(db, felix.FibNextAttemptFunc(config.FetchInterval, 7))
 		f := felix.NewFetcher(item.URL, source, html.LinkScanner, nextFetch, newItems, newLinks)
 		f.SetLogger(log)
 

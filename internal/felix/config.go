@@ -18,19 +18,23 @@ import (
 const (
 	DefaultFeedFetchInterval = 65 * time.Minute
 	DefaultUserAgent         = "felix"
+	DefaultPort              = 6554
+	DefaultFeedOutputMaxAge  = 6 * time.Hour
 	DefaultCleanupInterval   = 1 * time.Hour
 	DefaultCleanupMaxAge     = 24 * time.Hour
 )
 
 // Config contains the configuration
 type Config struct {
-	FetchInterval   time.Duration  `yaml:"fetchInterval"`
-	UserAgent       string         `yaml:"userAgent"`
-	CleanupInterval time.Duration  `yaml:"cleanupInterval"`
-	CleanupMaxAge   time.Duration  `yaml:"cleanupMaxAge"`
-	Feeds           []FeedConfig   `yaml:"feeds"`
-	ItemFilters     []FilterConfig `yaml:"itemFilters"`
-	LinkFilters     []FilterConfig `yaml:"linkFilters"`
+	FetchInterval    time.Duration  `yaml:"fetchInterval"`
+	UserAgent        string         `yaml:"userAgent"`
+	Port             int            `yaml:"port"`
+	FeedOutputMaxAge time.Duration  `yaml:"feedOutputMaxAge"`
+	CleanupInterval  time.Duration  `yaml:"cleanupInterval"`
+	CleanupMaxAge    time.Duration  `yaml:"cleanupMaxAge"`
+	Feeds            []FeedConfig   `yaml:"feeds"`
+	ItemFilters      []FilterConfig `yaml:"itemFilters"`
+	LinkFilters      []FilterConfig `yaml:"linkFilters"`
 }
 
 var emptyConfig = Config{}
@@ -109,10 +113,12 @@ type LinkFilenameAsTitleFilterConfig struct {
 func NewConfig() Config {
 	// TODO: return value or pointer?
 	return Config{
-		UserAgent:       DefaultUserAgent,
-		FetchInterval:   DefaultFeedFetchInterval,
-		CleanupInterval: DefaultCleanupInterval,
-		CleanupMaxAge:   DefaultCleanupMaxAge,
+		UserAgent:        DefaultUserAgent,
+		Port:             DefaultPort,
+		FetchInterval:    DefaultFeedFetchInterval,
+		FeedOutputMaxAge: DefaultFeedOutputMaxAge,
+		CleanupInterval:  DefaultCleanupInterval,
+		CleanupMaxAge:    DefaultCleanupMaxAge,
 	}
 }
 
