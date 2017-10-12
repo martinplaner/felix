@@ -6,3 +6,4 @@ script: ./coverage.sh
 
 after_success:
   - if [ -z "$TRAVIS_TAG" ]; then bash <(curl -s https://codecov.io/bash); else echo "Tag build detected. Not uploading coverage (codecov)."; fi
+  - test -n "$TRAVIS_TAG" && curl -sL https://git.io/goreleaser | bash
