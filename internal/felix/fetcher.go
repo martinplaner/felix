@@ -141,7 +141,7 @@ func (a attempt) Inc(key string) error {
 	return a.ds.IncAttempt(key)
 }
 
-// creates a new Attempter with the given NextFunc.
+// NewAttempter creates a new Attempter with the given NextAttemptFunc.
 func NewAttempter(ds Datastore, next NextAttemptFunc) Attempter {
 	return &attempt{
 		ds:   ds,

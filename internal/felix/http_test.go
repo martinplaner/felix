@@ -111,7 +111,7 @@ func TestFeedHandler(t *testing.T) {
 
 			for i, item := range feed.Items {
 				if item.Title != tC.links[i].Title {
-					t.Errorf("feed item %d title: %q != %q", item.Title, tC.links[i].Title)
+					t.Errorf("feed item %d title: %q != %q", i, item.Title, tC.links[i].Title)
 				}
 			}
 		})
