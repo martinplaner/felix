@@ -32,6 +32,7 @@ var (
 )
 
 var (
+	returnCode    = 0
 	log           = felix.NewLogger()
 	source        = felix.NewHTTPSource(http.DefaultClient)
 	newItems      = make(chan felix.Item)
@@ -77,6 +78,22 @@ func main() {
 	sig := make(chan os.Signal)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 
+	shutdown := func(status int) {
+		log.Info("got shutdown signal, finishing up")
+		returnCode = status
+		close(quit)
+		wgFeeds.Wait()
+		close(newItems)
+		wgItems.Wait()
+		close(newLinks)
+	}
+
+	// Shutdown handler
+	go func() {
+		<-sig
+		shutdown(0)
+	}()
+
 	// Start up components
 
 	for _, f := range feedFetchers {
@@ -107,18 +124,8 @@ func main() {
 		log.Info("starting http server", "addr", server.Addr)
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			log.Error("http server error", "err", err)
+			shutdown(1)
 		}
-	}()
-
-	// Shutdown handler
-	go func() {
-		<-sig
-		log.Info("got shutdown signal, finishing up")
-		close(quit)
-		wgFeeds.Wait()
-		close(newItems)
-		wgItems.Wait()
-		close(newLinks)
 	}()
 
 	// Insert filtered links into datastore
@@ -139,6 +146,7 @@ func main() {
 	}
 
 	log.Info("shutdown complete")
+	os.Exit(returnCode)
 }
 
 // run periodic datastore cleanup routine to remove entries older than maxAge
