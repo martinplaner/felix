@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Currently no changes or additions.
 
+## [0.3.1] - 2017-10-13
+
+### Fixed
+
+- Fixed graceful shutdown on http port error.
+- Linter and vet recommendations.
+
 ## [0.3.0] - 2017-10-12
 
 ### Added
@@ -48,3 +55,4 @@ This is the first working release.
 [0.1.0]: https://github.com/martinplaner/felix/releases/tag/v0.1.0
 [0.2.0]: https://github.com/martinplaner/felix/releases/tag/v0.2.0
 [0.3.0]: https://github.com/martinplaner/felix/releases/tag/v0.3.0
+[0.3.1]: https://github.com/martinplaner/felix/releases/tag/v0.3.1
