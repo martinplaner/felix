@@ -14,4 +14,4 @@ docker:
 	docker build . -t martinplaner/felix
 
 docker-run:
-	docker run -it --rm -v $(shell pwd)/config.yml:/config.yml -v /data -p 6554:6554 felix
+	docker run -it --rm -v $(shell pwd)/config.yml:/config.yml -v /data -p 6554:6554 martinplaner/felix

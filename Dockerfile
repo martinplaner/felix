@@ -2,11 +2,12 @@ FROM golang:alpine AS build-env
 
 WORKDIR /go/src/github.com/martinplaner/felix
 
-RUN apk update && apk add git
+RUN apk update && apk add git curl
 
 COPY . .
-RUN go get -t ./...
 RUN go get -u -v github.com/ahmetb/govvv
+RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+RUN dep ensure -vendor-only
 RUN go test -v ./...
 RUN GOOS=linux GOARCH=amd64 govvv build
 

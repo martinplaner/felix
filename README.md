@@ -25,11 +25,20 @@ For some vague notes about planned features and changes, see also [TODO](TODO.md
 
 `go get -u github.com/martinplaner/felix`, then run `felix`.
 
+This will fetch the latest release directly from the master branch.
+
 ### Via docker:
 
 Automated docker builds are available as [martinplaner/felix](https://hub.docker.com/r/martinplaner/felix/). Pull the image with `docker pull martinplaner/felix`.
 
 The image expects the config file mapped to `/config.yml` and a data volume mounted to `/data`.
+
+### Via GitHub releases:
+
+(Currently only available for 64 bit Linux.)
+
+Download the latest statically linked binary release from [releases](https://github.com/martinplaner/felix/releases) page.
+Extract and run as usual.
 
 ## Documentation
 

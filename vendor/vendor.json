@@ -1,7 +1,0 @@
-{
-    "comment": "Empty vendor file to satisfy heroku-buildpack-go: https://github.com/heroku/heroku-buildpack-go",
-    "rootPath": "github.com/martinplaner/felix",
-    "heroku": {
-        "sync": false
-    }
-}

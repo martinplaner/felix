@@ -1,6 +1,8 @@
 language: go
 
-install: go get -v -t -u ./...
+install:
+  - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+  - dep ensure -vendor-only
 
 script: ./coverage.sh
 

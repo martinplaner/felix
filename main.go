@@ -75,7 +75,7 @@ func main() {
 	var wgFeeds sync.WaitGroup
 	var wgItems sync.WaitGroup
 
-	sig := make(chan os.Signal)
+	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 
 	shutdown := func(status int) {
