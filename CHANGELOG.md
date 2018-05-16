@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Currently no changes or additions.
 
+## [0.3.2] - 2018-05-16
+
+### Fixed
+
+- Fixed an inconsistency with os signals blocking on channels.
+
+### Changed
+
+- Moved to [dep](https://github.com/golang/dep) for dependency management.
+- Updated README with binary releases info
+
 ## [0.3.1] - 2017-10-13
 
 ### Fixed
@@ -56,3 +67,4 @@ This is the first working release.
 [0.2.0]: https://github.com/martinplaner/felix/releases/tag/v0.2.0
 [0.3.0]: https://github.com/martinplaner/felix/releases/tag/v0.3.0
 [0.3.1]: https://github.com/martinplaner/felix/releases/tag/v0.3.1
+[0.3.2]: https://github.com/martinplaner/felix/releases/tag/v0.3.2
