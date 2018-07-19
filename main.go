@@ -241,6 +241,9 @@ func initLinkFilters(config felix.Config) []felix.LinkFilter {
 
 			linkFilters = append(linkFilters, felix.LinkFilenameAsTitleFilter(fc.TrimExt))
 
+		case "expanduploadedlinks":
+			linkFilters = append(linkFilters, felix.LinkUploadedExpandFilenameFilter(source))
+
 		default:
 			log.Fatal("unsupported link filter type", "type", f.Type)
 		}

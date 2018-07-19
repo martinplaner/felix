@@ -14,6 +14,14 @@ import (
 
 	"path/filepath"
 
+	"context"
+
+	"time"
+
+	"io"
+
+	"io/ioutil"
+
 	"github.com/pkg/errors"
 )
 
@@ -283,4 +291,77 @@ func LinkFilenameAsTitleFilter(trimExt bool) LinkFilter {
 		link.Title = filename
 		next(link)
 	})
+}
+
+// LinkUploadedExpandFilenameFilter expands the filename from an uploaded file URL and sets the appropriate new URL,
+// e.g. uploaded.net/file/xxxxxxxx -> uploaded.net/file/xxxxxxxx/file.ext.
+// This is sometime needed for easier filtering down the filter chain.
+func LinkUploadedExpandFilenameFilter(source Source) LinkFilter {
+
+	return LinkFilterFunc(func(link Link, next func(Link)) {
+		u, err := url.Parse(strings.TrimSpace(link.URL))
+
+		// TODO: accept or reject non-parsable URLs?
+		if err != nil {
+			return
+		}
+
+		// Only process "uploaded" domains
+		if u.Hostname() != "ul.to" && u.Hostname() != "uploaded.net" {
+			next(link)
+			return
+		}
+
+		pathSegments := strings.Split(strings.Trim(u.Path, "/"), "/")
+
+		// Only process short form file URLs
+		if len(pathSegments) < 1 || len(pathSegments) > 2 {
+			next(link)
+			return
+		}
+
+		var id string
+		if len(pathSegments) == 1 {
+			id = pathSegments[0]
+		} else if len(pathSegments) == 2 && pathSegments[0] == "file" {
+			id = pathSegments[1]
+		} else {
+			next(link)
+			return
+		}
+
+		statusURL := fmt.Sprintf("%s://%s/file/%s/status", u.Scheme, u.Hostname(), id)
+		// TODO: pass context to filters?
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		reader, err := source.Get(ctx, statusURL)
+
+		if err != nil {
+			// fetch failed, skip link
+			return
+		}
+
+		filename := parseULFilename(reader)
+		if filename == "" {
+			return
+		}
+
+		link.URL = fmt.Sprintf("%s://%s/file/%s/%s", u.Scheme, u.Hostname(), id, filename)
+		next(link)
+	})
+}
+
+func parseULFilename(r io.Reader) string {
+	s, err := ioutil.ReadAll(r)
+
+	if err != nil {
+		return ""
+	}
+
+	split := strings.Split(string(s), "\n")
+	if len(split) < 1 {
+		return ""
+	}
+
+	return split[0]
 }

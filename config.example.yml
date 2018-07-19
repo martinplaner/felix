@@ -22,6 +22,7 @@ linkFilters:
     domains:
       - example.com
       - example.org
+  - type: expanduploadedlinks
   - type: regex
     exprs:
       - .*\.mkv$
