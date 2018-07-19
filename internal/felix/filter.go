@@ -284,3 +284,28 @@ func LinkFilenameAsTitleFilter(trimExt bool) LinkFilter {
 		next(link)
 	})
 }
+
+// LinkUploadedExpandFilenameFilter expands the filename from an uploaded file URL and sets the appropriate new URL,
+// e.g. uploaded.net/file/xxxxxxxx -> uploaded.net/file/xxxxxxxx/file.ext.
+// This is sometime needed for easier filtering down the filter chain.
+func LinkUploadedExpandFilenameFilter(source Source) LinkFilter {
+
+	return LinkFilterFunc(func(link Link, next func(Link)) {
+		u, err := url.Parse(strings.TrimSpace(link.URL))
+
+		// TODO: accept or reject non-parsable URLs?
+		if err != nil {
+			return
+		}
+
+		// Only process "uploaded" domains
+		if u.Hostname() != "ul.to" && u.Hostname() != "uploaded.net" {
+			next(link)
+			return
+		}
+
+		//pathSegments := strings.Split(strings.Trim(u.Path, "/"), "/")
+
+		next(link)
+	})
+}
