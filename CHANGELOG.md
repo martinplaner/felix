@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Currently no changes or additions.
 
+## [0.4.0] - 2018-07-19
+
+### Added
+
+- LinkUploadedExpandFilenameFilter ("expanduploadedlinks") for resolving short form uploaded links to long form including file name.
+
+### Fixed
+
+- Added TLS certificates to Docker image for HTTPS support.
+
+### Changed
+
+- Updated library dependencies.
+
 ## [0.3.2] - 2018-05-16
 
 ### Fixed
@@ -68,3 +82,4 @@ This is the first working release.
 [0.3.0]: https://github.com/martinplaner/felix/releases/tag/v0.3.0
 [0.3.1]: https://github.com/martinplaner/felix/releases/tag/v0.3.1
 [0.3.2]: https://github.com/martinplaner/felix/releases/tag/v0.3.2
+[0.4.0]: https://github.com/martinplaner/felix/releases/tag/v0.4.0
