@@ -14,6 +14,14 @@ import (
 
 	"path/filepath"
 
+	"context"
+
+	"time"
+
+	"io"
+
+	"io/ioutil"
+
 	"github.com/pkg/errors"
 )
 
@@ -304,8 +312,56 @@ func LinkUploadedExpandFilenameFilter(source Source) LinkFilter {
 			return
 		}
 
-		//pathSegments := strings.Split(strings.Trim(u.Path, "/"), "/")
+		pathSegments := strings.Split(strings.Trim(u.Path, "/"), "/")
 
+		// Only process short form file URLs
+		if len(pathSegments) < 1 || len(pathSegments) > 2 {
+			next(link)
+			return
+		}
+
+		var id string
+		if len(pathSegments) == 1 {
+			id = pathSegments[0]
+		} else if len(pathSegments) == 2 && pathSegments[0] == "file" {
+			id = pathSegments[1]
+		} else {
+			next(link)
+			return
+		}
+
+		statusURL := fmt.Sprintf("%s://%s/file/%s/status", u.Scheme, u.Hostname(), id)
+		// TODO: pass context to filters?
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		reader, err := source.Get(ctx, statusURL)
+
+		if err != nil {
+			// fetch failed, skip link
+			return
+		}
+
+		filename := parseULFilename(reader)
+		if filename == "" {
+			return
+		}
+
+		link.URL = fmt.Sprintf("%s://%s/file/%s/%s", u.Scheme, u.Hostname(), id, filename)
 		next(link)
 	})
+}
+
+func parseULFilename(r io.Reader) string {
+	s, err := ioutil.ReadAll(r)
+
+	if err != nil {
+		return ""
+	}
+
+	split := strings.Split(string(s), "\n")
+	if len(split) < 1 {
+		return ""
+	}
+
+	return split[0]
 }

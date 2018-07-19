@@ -409,6 +409,18 @@ func TestLinkUploadedExpandFilenameFilter(t *testing.T) {
 		expected []Link
 	}{
 		{
+			desc:     "uploaded.net domain, already expanded form",
+			filter:   buildFilter("", false),
+			input:    []Link{Link{Title: "title", URL: "http://uploaded.net/file/xxxxxxxx/file.ext"}},
+			expected: []Link{Link{Title: "title", URL: "http://uploaded.net/file/xxxxxxxx/file.ext"}},
+		},
+		{
+			desc:     "uploaded.net domain, not a file URL",
+			filter:   buildFilter("", false),
+			input:    []Link{Link{Title: "title", URL: "http://uploaded.net/some/other/url"}},
+			expected: []Link{Link{Title: "title", URL: "http://uploaded.net/some/other/url"}},
+		},
+		{
 			desc:     "uploaded.net domain, existing file",
 			filter:   buildFilter("file.ext", true),
 			input:    []Link{Link{Title: "title", URL: "http://uploaded.net/file/xxxxxxxx"}},
@@ -418,6 +430,12 @@ func TestLinkUploadedExpandFilenameFilter(t *testing.T) {
 			desc:     "ul.to domain, existing file",
 			filter:   buildFilter("file.ext", true),
 			input:    []Link{Link{Title: "title", URL: "http://ul.to/file/xxxxxxxx"}},
+			expected: []Link{Link{Title: "title", URL: "http://ul.to/file/xxxxxxxx/file.ext"}},
+		},
+		{
+			desc:     "ul.to domain, existing file, ultra short form",
+			filter:   buildFilter("file.ext", true),
+			input:    []Link{Link{Title: "title", URL: "http://ul.to/xxxxxxxx"}},
 			expected: []Link{Link{Title: "title", URL: "http://ul.to/file/xxxxxxxx/file.ext"}},
 		},
 		{
