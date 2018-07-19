@@ -5,7 +5,12 @@
 package felix
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -359,6 +364,109 @@ func TestLinkFilenameAsTitleFilter(t *testing.T) {
 			filter:   LinkFilenameAsTitleFilter(false),
 			input:    []Link{{Title: "title", URL: "http://example.com/category/announcements/"}, {Title: "title", URL: "http://example.com/news/   "}},
 			expected: []Link{{Title: "title", URL: "http://example.com/category/announcements/"}, {Title: "title", URL: "http://example.com/news/   "}},
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			got := runLinkFilter(tC.filter, tC.input)
+
+			if len(got) != len(tC.expected) {
+				t.Errorf("unexpected number of links returned by filter, expected %d, got %d", len(tC.expected), len(got))
+			}
+
+			if !reflect.DeepEqual(got, tC.expected) {
+				t.Errorf("unexpected links returned by filter, expected %#v, got %#v", tC.expected, got)
+			}
+		})
+	}
+}
+
+type mockSource func(ctx context.Context, url string) (io.Reader, error)
+
+func (f mockSource) Get(ctx context.Context, url string) (io.Reader, error) {
+	return f(ctx, url)
+}
+
+func TestLinkUploadedExpandFilenameFilter(t *testing.T) {
+
+	buildFilter := func(filename string, success bool) LinkFilter {
+		source := mockSource(func(ctx context.Context, url string) (io.Reader, error) {
+			if !success {
+				return nil, errors.New("mock source error")
+			}
+
+			return strings.NewReader(fmt.Sprintf("%s\n198,90 KB", filename)), nil
+		})
+
+		return LinkUploadedExpandFilenameFilter(source)
+	}
+
+	testCases := []struct {
+		desc     string
+		filter   LinkFilter
+		input    []Link
+		expected []Link
+	}{
+		{
+			desc:     "uploaded.net domain, already expanded form",
+			filter:   buildFilter("", false),
+			input:    []Link{Link{Title: "title", URL: "http://uploaded.net/file/xxxxxxxx/file.ext"}},
+			expected: []Link{Link{Title: "title", URL: "http://uploaded.net/file/xxxxxxxx/file.ext"}},
+		},
+		{
+			desc:     "uploaded.net domain, not a file URL",
+			filter:   buildFilter("", false),
+			input:    []Link{Link{Title: "title", URL: "http://uploaded.net/some/other/url"}},
+			expected: []Link{Link{Title: "title", URL: "http://uploaded.net/some/other/url"}},
+		},
+		{
+			desc:     "uploaded.net domain, existing file",
+			filter:   buildFilter("file.ext", true),
+			input:    []Link{Link{Title: "title", URL: "http://uploaded.net/file/xxxxxxxx"}},
+			expected: []Link{Link{Title: "title", URL: "http://uploaded.net/file/xxxxxxxx/file.ext"}},
+		},
+		{
+			desc:     "ul.to domain, existing file",
+			filter:   buildFilter("file.ext", true),
+			input:    []Link{Link{Title: "title", URL: "http://ul.to/file/xxxxxxxx"}},
+			expected: []Link{Link{Title: "title", URL: "http://ul.to/file/xxxxxxxx/file.ext"}},
+		},
+		{
+			desc:     "ul.to domain, existing file, ultra short form",
+			filter:   buildFilter("file.ext", true),
+			input:    []Link{Link{Title: "title", URL: "http://ul.to/xxxxxxxx"}},
+			expected: []Link{Link{Title: "title", URL: "http://ul.to/file/xxxxxxxx/file.ext"}},
+		},
+		{
+			desc:     "existing file, trailing slash",
+			filter:   buildFilter("file.ext", true),
+			input:    []Link{Link{Title: "title", URL: "http://uploaded.net/file/xxxxxxxx/"}},
+			expected: []Link{Link{Title: "title", URL: "http://uploaded.net/file/xxxxxxxx/file.ext"}},
+		},
+		{
+			desc:     "valid domain, fetch error",
+			filter:   buildFilter("", false),
+			input:    []Link{Link{Title: "title", URL: "http://uploaded.net/file/xxxxxxxx"}},
+			expected: []Link{},
+		},
+		{
+			desc:     "valid domain, empty filename, PARSING ERROR??",
+			filter:   buildFilter("", true),
+			input:    []Link{Link{Title: "title", URL: "http://uploaded.net/file/xxxxxxxx"}},
+			expected: []Link{},
+		},
+		{
+			desc:     "invalid domain, should not touch link",
+			filter:   buildFilter("", true),
+			input:    []Link{Link{Title: "title", URL: "http://example.com/files/foobar.ext"}},
+			expected: []Link{Link{Title: "title", URL: "http://example.com/files/foobar.ext"}},
+		},
+		{
+			desc:     "invalid domain, fetch error, should not touch link",
+			filter:   buildFilter("", false),
+			input:    []Link{Link{Title: "title", URL: "http://sub.example.org/files/foobar.ext"}},
+			expected: []Link{Link{Title: "title", URL: "http://sub.example.org/files/foobar.ext"}},
 		},
 	}
 

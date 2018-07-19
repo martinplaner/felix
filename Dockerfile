@@ -14,7 +14,7 @@ RUN GOOS=linux GOARCH=amd64 govvv build
 
 FROM alpine
 
-RUN apk update && apk upgrade
+RUN apk update && apk upgrade && apk add ca-certificates
 
 COPY --from=build-env /go/src/github.com/martinplaner/felix/felix /felix
 
