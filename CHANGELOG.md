@@ -10,6 +10,7 @@ Currently no changes or additions.
 
 ### Added
 
+- Implemented additional HTML link scanning via regex for text-based links.
 - LinkDuplicatesFilter to filter duplicate links using a configurable sliding comparison window.
 
 ## [0.4.0] - 2018-07-19
