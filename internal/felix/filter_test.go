@@ -411,13 +411,13 @@ func TestLinkUploadedExpandFilenameFilter(t *testing.T) {
 		{
 			desc:     "uploaded.net domain, already expanded form",
 			filter:   buildFilter("", false),
-			input:    []Link{Link{Title: "title", URL: "http://uploaded.net/file/xxxxxxxx/file.ext"}},
-			expected: []Link{Link{Title: "title", URL: "http://uploaded.net/file/xxxxxxxx/file.ext"}},
+			input:    []Link{{Title: "title", URL: "http://uploaded.net/file/xxxxxxxx/file.ext"}},
+			expected: []Link{{Title: "title", URL: "http://uploaded.net/file/xxxxxxxx/file.ext"}},
 		},
 		{
 			desc:     "uploaded.net domain, not a file URL",
 			filter:   buildFilter("", false),
-			input:    []Link{Link{Title: "title", URL: "http://uploaded.net/some/other/url"}},
+			input:    []Link{{Title: "title", URL: "http://uploaded.net/some/other/url"}},
 			expected: []Link{Link{Title: "title", URL: "http://uploaded.net/some/other/url"}},
 		},
 		{
@@ -467,6 +467,48 @@ func TestLinkUploadedExpandFilenameFilter(t *testing.T) {
 			filter:   buildFilter("", false),
 			input:    []Link{Link{Title: "title", URL: "http://sub.example.org/files/foobar.ext"}},
 			expected: []Link{Link{Title: "title", URL: "http://sub.example.org/files/foobar.ext"}},
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			got := runLinkFilter(tC.filter, tC.input)
+
+			if len(got) != len(tC.expected) {
+				t.Errorf("unexpected number of links returned by filter, expected %d, got %d", len(tC.expected), len(got))
+			}
+
+			if !reflect.DeepEqual(got, tC.expected) {
+				t.Errorf("unexpected links returned by filter, expected %#v, got %#v", tC.expected, got)
+			}
+		})
+	}
+}
+
+func TestLinkDuplicatesFilter(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		filter   LinkFilter
+		input    []Link
+		expected []Link
+	}{
+		{
+			desc:     "unique urls",
+			filter:   LinkDuplicatesFilter(100),
+			input:    []Link{{"", "A"}, {"", "B"}, {"", "C"}},
+			expected: []Link{{"", "A"}, {"", "B"}, {"", "C"}},
+		},
+		{
+			desc:     "some duplicate urls with different titles",
+			filter:   LinkDuplicatesFilter(100),
+			input:    []Link{{"", "A"}, {"", "B"}, {"a", "A"}, {"b", "A"}, {"c", "A"}},
+			expected: []Link{{"", "A"}, {"", "B"}},
+		},
+		{
+			desc:     "sliding search window overflow",
+			filter:   LinkDuplicatesFilter(1),
+			input:    []Link{{"", "A"}, {"", "B"}, {"a", "A"}, {"b", "A"}, {"c", "A"}},
+			expected: []Link{{"", "A"}, {"", "B"}, {"a", "A"}},
 		},
 	}
 
