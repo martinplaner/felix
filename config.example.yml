@@ -22,6 +22,8 @@ linkFilters:
     domains:
       - example.com
       - example.org
+  - type: duplicates
+    size: 200
   - type: expanduploadedlinks
   - type: regex
     exprs:

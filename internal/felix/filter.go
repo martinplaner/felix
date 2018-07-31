@@ -213,6 +213,35 @@ func buildLinkFilterChain(filters ...LinkFilter) LinkFilter {
 	}
 }
 
+// LinkDuplicatesFilter filters duplicate links based on the link URL.
+// The links URLs are compared over a sliding window of the given size.
+func LinkDuplicatesFilter(size int) LinkFilter {
+
+	if size <= 0 {
+		size = 1
+	}
+
+	foundURLs := make(map[string]bool)
+	var seqURLs []string
+
+	return LinkFilterFunc(func(link Link, next func(Link)) {
+		if foundURLs[link.URL] {
+			return
+		}
+
+		foundURLs[link.URL] = true
+		seqURLs = append(seqURLs, link.URL)
+
+		for len(seqURLs) > size {
+			u := seqURLs[0]
+			delete(foundURLs, u)
+			seqURLs = seqURLs[1:] // TODO: could reslicing lead to memory problems over time?
+		}
+
+		next(link)
+	})
+}
+
 // LinkDomainFilter filters links based on the given domains.
 func LinkDomainFilter(domains ...string) LinkFilter {
 
