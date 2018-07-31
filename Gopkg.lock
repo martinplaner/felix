@@ -34,7 +34,7 @@
   revision = "f15292f7a699fcc1a38a80977f80a046874ba8ac"
 
 [[projects]]
-  digest = "1:00d99b12657312252f6d678267395aff84ac29ea5e8bc06dfebd5267b164639d"
+  digest = "1:b0142f883994390cee3fc0efbee8644c91796eb17d6af1bf8268a0961e6c0f3b"
   name = "github.com/mmcdole/gofeed"
   packages = [
     ".",
@@ -65,7 +65,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:526b09017650eb48c7730ecf5bc266a56c68c6f147ea5bac8905ef2e0536ac6b"
+  digest = "1:cad34014b7bd09f0fba95d5ce1f6dd5a970b2b6615b560c211f65b696ab2dee0"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -74,18 +74,18 @@
     "html/charset",
   ]
   pruneopts = "UT"
-  revision = "81d44fd177a98d09fe3bc40a5a78d495d3f042ea"
+  revision = "a0f8a16cb08c06df97cbdf9c47f4731ba548c33c"
 
 [[projects]]
   branch = "master"
-  digest = "1:d773e525476aefa22ea944a5425a9bfb99819b2e67eeb9b1966454fd57522bbf"
+  digest = "1:8466957fb2af510f68b13aec64ccad13e9e756dc1da3ea28c422f8ac410e56f0"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = "UT"
-  revision = "ac767d655b305d4e9612f5f6e33120b9176c4ad4"
+  revision = "bd9dbc187b6e1dacfdd2722a87e83093c2d7bd6e"
 
 [[projects]]
-  digest = "1:00b52d21f87065cee85096f07ba40957cc53719145c224da5f5d113669868213"
+  digest = "1:aa4d6967a3237f8367b6bf91503964a77183ecf696f1273e8ad3551bb4412b5f"
   name = "golang.org/x/text"
   packages = [
     "encoding",
