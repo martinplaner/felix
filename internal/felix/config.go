@@ -109,6 +109,7 @@ type LinkFilenameAsTitleFilterConfig struct {
 	TrimExt bool `yaml:"trimExt"`
 }
 
+// LinkDuplicatesFilterConfig contains the configuration of a LinkDuplicatesFilter.
 type LinkDuplicatesFilterConfig struct {
 	Size int
 }
