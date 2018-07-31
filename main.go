@@ -212,6 +212,16 @@ func initLinkFilters(config felix.Config) []felix.LinkFilter {
 	for _, f := range config.LinkFilters {
 		switch f.Type {
 
+		case "duplicates":
+			var fc felix.LinkDuplicatesFilterConfig
+			if err := f.Unmarshal(&fc); err != nil {
+				log.Fatal("could not decode filter config", "err", err, "type", f.Type)
+			}
+			if fc.Size <= 0 {
+				fc.Size = 100
+			}
+			linkFilters = append(linkFilters, felix.LinkDuplicatesFilter(fc.Size))
+
 		case "domain":
 			var fc felix.LinkDomainFilterConfig
 			if err := f.Unmarshal(&fc); err != nil {

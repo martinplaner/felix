@@ -109,6 +109,10 @@ type LinkFilenameAsTitleFilterConfig struct {
 	TrimExt bool `yaml:"trimExt"`
 }
 
+type LinkDuplicatesFilterConfig struct {
+	Size int
+}
+
 // NewConfig returns a new configuration with default values.
 func NewConfig() Config {
 	// TODO: return value or pointer?

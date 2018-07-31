@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Currently no changes or additions.
 
+### Added
+
+- LinkDuplicatesFilter to filter duplicate links using a configurable sliding comparison window.
+
 ## [0.4.0] - 2018-07-19
 
 ### Added
