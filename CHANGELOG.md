@@ -8,10 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Currently no changes or additions.
 
+## [0.5.0] - 2018-07-31
+
 ### Added
 
 - Implemented additional HTML link scanning via regex for text-based links.
-- LinkDuplicatesFilter to filter duplicate links using a configurable sliding comparison window.
+- Added LinkDuplicatesFilter to filter duplicate links using a configurable sliding comparison window.
 
 ## [0.4.0] - 2018-07-19
 
@@ -88,3 +90,4 @@ This is the first working release.
 [0.3.1]: https://github.com/martinplaner/felix/releases/tag/v0.3.1
 [0.3.2]: https://github.com/martinplaner/felix/releases/tag/v0.3.2
 [0.4.0]: https://github.com/martinplaner/felix/releases/tag/v0.4.0
+[0.5.0]: https://github.com/martinplaner/felix/releases/tag/v0.5.0
